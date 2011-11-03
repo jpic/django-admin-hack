@@ -3,9 +3,11 @@
 {% block extrahead %}
 {{ block.super }}
 <style type="text/css">
+    {% if not adminform.form.instance.pk %}
     input[name=_addanother], input[name=_save] {
         display: none;
     }
+    {% endif %}
 </style>
 {% endblock %}
 
@@ -13,7 +15,9 @@
 {{ block.super }}
 <script type="text/javascript">
 (function($) {
+    {% if not adminform.form.instance.pk %}
     $('input[name=_continue]').addClass('default');
+    {% endif %}
 })(django.jQuery)
 </script>
 {% endblock %}
