@@ -1,0 +1,19 @@
+{% extends 'admin/change_form.html' %}
+
+{% block extrahead %}
+{{ block.super }}
+<style type="text/css">
+    input[name=_addanother], input[name=_save] {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script type="text/javascript">
+(function($) {
+    $('input[name=_continue]').addClass('default');
+})(django.jQuery)
+</script>
+{% endblock %}
