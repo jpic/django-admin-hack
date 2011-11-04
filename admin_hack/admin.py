@@ -35,4 +35,5 @@ class FormModelAdmin(admin.ModelAdmin):
         else:
             obj.save()
 
+admin.site.register(AdminHackUserProfile)
 admin.site.register(Form, FormModelAdmin)

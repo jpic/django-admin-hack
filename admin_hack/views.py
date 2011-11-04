@@ -1,13 +1,26 @@
 import re
 
+from django import http
 from django.db.models import get_model
 from django.views import generic
 from django.contrib.contenttypes.models import ContentType
 from django.utils import simplejson
 
 from models import *
+from forms import *
 
 FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/$'
+
+class AdminHackUserProfileUpdateView(generic.UpdateView):
+    form_class = AdminHackUserProfileForm
+    model = AdminHackUserProfile
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return http.HttpResponse('OK', status=200)
+
+    def form_invalid(self, form):
+        return http.HttpResponse(form.errors, status=500)
 
 class JsHackView(generic.TemplateView):
     template_name = 'admin_hack/hack.js'
@@ -33,6 +46,8 @@ class JsHackView(generic.TemplateView):
                         
             forms_dict = c['forms_dict'] = [f.to_dict() for f in forms]
 
-            c['forms_json'] = simplejson.dumps(forms_dict)
+            user_forms = self.request.user.adminhackuserprofile.forms
+            last_form_pk = c['last_form_pk'] = user_forms.filter(
+                    contenttype=ctype)[0].pk
 
         return c
