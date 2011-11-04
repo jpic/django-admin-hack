@@ -36,6 +36,10 @@
             });
         },
         renderSelect: function() {
+            if (!this.forms.length) {
+                return '';
+            }
+
             var html = [
                 '<select id="_preset_change" style="display:inline">',
             ];

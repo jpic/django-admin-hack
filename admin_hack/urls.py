@@ -6,8 +6,8 @@ import views
 
 urlpatterns = patterns('',
     url(
-        r'^form/hack/$',
-        views.FormHackView.as_view(),
-        name='admin_tools_plus_form_hack'
+        r'^js/$',
+        views.JsHackView.as_view(),
+        name='admin_hack_js_hack'
     ),
 )

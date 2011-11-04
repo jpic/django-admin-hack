@@ -9,11 +9,11 @@ from models import *
 
 FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/$'
 
-class FormHackView(generic.TemplateView):
-    template_name = 'admin_tools_plus/form_hack.js'
+class JsHackView(generic.TemplateView):
+    template_name = 'admin_hack/hack.js'
 
     def render_to_response(self, context):
-        return super(FormHackView, self).render_to_response(context,
+        return super(JsHackView, self).render_to_response(context,
             content_type='text/javascript')
 
     def get_context_data(self, **kwargs):

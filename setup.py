@@ -3,12 +3,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='django-admin-tools-plus',
+    name='django-admin-hacks',
     version="0.0",
     author='James Pic',
     author_email='jamespic@gmail.com',
-    description='Manage menus and fieldsets throught the admin',
-    url='http://github.com/jpic/django-admin-tools-plus',
+    description='Make django-admin-tools more customisable',
+    url='http://github.com/jpic/django-admin-hacks',
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
