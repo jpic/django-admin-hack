@@ -1,0 +1,3 @@
+.admin_hack_hidden, .collapsed .form-row {
+    display: none !important;
+}

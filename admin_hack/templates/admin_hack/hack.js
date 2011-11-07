@@ -49,6 +49,7 @@
 
         $(document).bind('admin_hack.ChangeView.changeSelectForm', 
             function(e, select, form) {
+                cv.form = form;
                 cv.updateForm(select, form);
             }
         );
@@ -76,6 +77,11 @@
             cv = this;
 
             $('.form-row').each(function() {
+                if ($(this).find('.field-box').length > 0) {
+                    /* pass on form rows with multiple fields */
+                    return;
+                }
+
                 var hide = true;
                 for ( var i in form.field_set ) {
                     var name = form.field_set[i].name;
@@ -85,9 +91,66 @@
                 }
 
                 if (hide) {
+                    $(this).addClass('admin_hack_hidden');
+                } else {
+                    $(this).removeClass('admin_hack_hidden');
+                }
+            });
+
+            $('.field-box').each(function() {
+                var hide = true;
+
+                for ( var i in form.field_set ) {
+                    var name = form.field_set[i].name;
+                    if ( $(this).find('[name='+name+']').length ) {
+                        hide = false;
+                    }
+                }
+
+                if (hide) {
                     $(this).hide();
                 } else {
                     $(this).show();
+                }
+            });
+
+            $('.form-row').each(function() {
+                if ($(this).find('.field-box').length == 0) {
+                    return;
+                }
+                
+                var all_hidden = true;
+
+                $(this).find('.field-box').each(function() {
+                    if (! $(this).hasClass('admin_hack_hidden')) {
+                        all_hidden = false;
+                    }
+                });
+
+                if (all_hidden) {
+                    $(this).addClass('admin_hack_hidden');
+                } else {
+                    $(this).removeClass('admin_hack_hidden');
+                }
+            });
+
+            $('fieldset.module').each(function() {
+                /* pass on inlines for the moment */
+                if ($(this).parent().hasClass('inline-related')) {
+                    return;
+                }
+
+                /* if all rows are hidden then hide the module */
+                if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
+                    $(this).addClass('admin_hack_hidden');
+                    if ($(this).hasClass('collapse') && $(this).hasClass('collapsed')) {
+                        $(this).find('h2 a').click();
+                    }
+                } else {
+                    $(this).removeClass('admin_hack_hidden');
+                    if ($(this).hasClass('collapse') && !$(this).hasClass('collapsed')) {
+                        $(this).find('h2 a').click();
+                    }
                 }
             });
         },

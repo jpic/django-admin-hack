@@ -47,7 +47,10 @@ class JsHackView(generic.TemplateView):
             forms_dict = c['forms_dict'] = [f.to_dict() for f in forms]
 
             user_forms = self.request.user.adminhackuserprofile.forms
-            last_form_pk = c['last_form_pk'] = user_forms.filter(
-                    contenttype=ctype)[0].pk
+            try:
+                last_form_pk = c['last_form_pk'] = user_forms.filter(
+                        contenttype=ctype)[0].pk
+            except IndexError:
+                pass
 
         return c
