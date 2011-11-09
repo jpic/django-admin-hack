@@ -108,9 +108,9 @@
                 }
 
                 if (hide) {
-                    $(this).hide();
+                    $(this).addClass('admin_hack_hidden');
                 } else {
-                    $(this).show();
+                    $(this).removeClass('admin_hack_hidden');
                 }
             });
 
@@ -141,16 +141,13 @@
                 }
 
                 /* if all rows are hidden then hide the module */
+                console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible'));
                 if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
                     $(this).addClass('admin_hack_hidden');
-                    if ($(this).hasClass('collapse') && $(this).hasClass('collapsed')) {
-                        $(this).find('h2 a').click();
-                    }
+                    $(this).find('h2').addClass('admin_hack_hidden');
                 } else {
                     $(this).removeClass('admin_hack_hidden');
-                    if ($(this).hasClass('collapse') && !$(this).hasClass('collapsed')) {
-                        $(this).find('h2 a').click();
-                    }
+                    $(this).find('h2').removeClass('admin_hack_hidden');
                 }
             });
         },

@@ -1,3 +1,5 @@
-.admin_hack_hidden, .collapsed .form-row {
+.admin_hack_hidden, .collapsed .form-row, 
+fieldset.collapsed.admin_hack_hidden h2, 
+fieldset.collapsed.admin_hack_hidden {
     display: none !important;
 }
