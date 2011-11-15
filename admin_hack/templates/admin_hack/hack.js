@@ -1,4 +1,5 @@
 {% load url from future %}
+{% load i18n %}
 {% load admin_hack_tags %}
 
 (function($) { $(document).ready(function() {
@@ -177,5 +178,13 @@
             change_view.select.val({{ last_form_pk }});
             change_view.select.trigger('change');
         {% endif %}
+    {% endif %}
+
+    {% if list_view and smuggler %}
+        var html = ['<li><a href="{% url 'dump-model-data' app model %}">'];
+        html.push('{% trans 'Export ' %} ')
+        html.push('{{ model_verbose_name_plural }}')
+        html.push('</a></li>')
+        $('ul.object-tools').append(html.join(''));
     {% endif %}
 }); })(django.jQuery)

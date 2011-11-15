@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django import http
 from django.db.models import get_model
 from django.views import generic
@@ -10,6 +11,7 @@ from models import *
 from forms import *
 
 FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/$'
+LIST_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/$'
 
 class AdminHackUserProfileUpdateView(generic.UpdateView):
     form_class = AdminHackUserProfileForm
@@ -31,7 +33,9 @@ class JsHackView(generic.TemplateView):
 
     def get_context_data(self, **kwargs):
         c = kwargs
-        url = self.request.META.get('HTTP_REFERER', '/admin/art/artist/3/')
+        url = self.request.META.get('HTTP_REFERER', '/admin/art/artist/')
+
+        c['smuggler'] = 'smuggler' in settings.INSTALLED_APPS
 
         # impossible to get the model name from urlresolvers.resolve 
         # so here goes some regexp that will break when django.contrib.admin
@@ -52,5 +56,15 @@ class JsHackView(generic.TemplateView):
                         contenttype=ctype)[0].pk
             except IndexError:
                 pass
-
+        else:
+            m = re.search(LIST_URL_REGEXP, url)
+            if m is not None:
+                c.update({
+                    'list_view': True, 
+                    'app': m.group('app'),
+                    'model': m.group('model'),
+                })
+                model = get_model(m.group('app'), m.group('model'))
+                c['model_verbose_name_plural'] = model._meta.verbose_name_plural
+        
         return c
