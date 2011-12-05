@@ -1,8 +1,52 @@
+from django.core import urlresolvers
 from django.contrib import admin
 from django.db import models
 from django.utils.translation import ugettext as _
 from django.db.models import signals
+
+from autoslug import AutoSlugField
 from annoying.fields import AutoOneToOneField
+
+KIND_CHOICES = (
+    ('float', _('number')),
+    ('char', _('short text')),
+    ('text', _('text')),
+    ('datetime', _('date and time')),
+    ('date', _('date only')),
+    ('time', _('time only')),
+    ('image', _('image')),
+    ('file', _('file')),
+)
+
+class CustomValue(models.Model):
+    name = models.CharField(max_length=100)
+    slug = AutoSlugField(populate_from='name')
+
+    kind = models.CharField(choices=KIND_CHOICES, max_length=10)
+
+    float_value = models.FloatField(null=True, blank=True)
+    char_value = models.CharField(max_length=255, null=True, blank=True)
+    text_value = models.TextField(null=True, blank=True)
+    datetime_value = models.DateTimeField(null=True, blank=True)
+    date_value = models.DateField(null=True, blank=True)
+    time_value = models.TimeField(null=True, blank=True)
+    image_value = models.ImageField(null=True, blank=True, 
+        upload_to='custom_value_images')
+    file_value = models.FileField(null=True, blank=True,
+        upload_to='custom_value_files')
+
+    @property
+    def value(self):
+        for k, v in KIND_CHOICES:
+            val = getattr(self, k + '_value', None)
+            if val is not None:
+                return val
+
+    def __unicode__(self):
+        return self.value
+
+    class Meta:
+        ordering = ('name',)
 
 class AdminHackUserProfile(models.Model):
     user = AutoOneToOneField('auth.user', primary_key=True)
@@ -33,6 +77,10 @@ class Form(models.Model):
             ('name', 'contenttype'),
         )
 
+    def get_absolute_url(self):
+        return urlresolvers.reverse('admin:admin_hack_form_change', 
+            args=(self.pk,))
+
     def to_dict(self):
         return {
             'name': self.name,
@@ -40,7 +88,8 @@ class Form(models.Model):
             'contenttype': {
                 'pk': self.contenttype.pk,
             },
-            'field_set': [f.to_dict() for f in self.field_set.all()]
+            'field_set': [f.to_dict() for f in self.field_set.all()],
+            'absolute_url': self.get_absolute_url(),
         }
 
 class Field(models.Model):

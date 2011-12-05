@@ -158,7 +158,7 @@
             }
 
             var html = [
-                '<select id="_preset_change" style="display:inline">',
+                '<select id="_preset_change" style="display:inline; vertical-align: top;">',
             ];
             for (var i in this.forms) {
                 html.push('<option value="' + this.forms[i].pk + '">');
@@ -173,7 +173,8 @@
     var user_profile = new UserProfile({{ request.user.adminhackuserprofile.to_dict|as_json }});
 
     var change_view = new ChangeView({{ forms_dict|as_json }});
-    change_view.installSelect($('#content-main'), user_profile);
+    var main = $('#content-main')
+    change_view.installSelect(main, user_profile);
         {% if last_form_pk %}
             change_view.select.val({{ last_form_pk }});
             change_view.select.trigger('change');

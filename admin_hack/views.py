@@ -24,6 +24,19 @@ class AdminHackUserProfileUpdateView(generic.UpdateView):
     def form_invalid(self, form):
         return http.HttpResponse(form.errors, status=500)
 
+class ExportView(generic.TemplateView):
+    template_name = 'admin_hack/export.html'
+
+    def get_context_data(self, **kwargs):
+        self.model = get_model(request.GET.get('app'), request.GET.get('model'))
+        self.queryset = self.model.objects.filter(
+            pk__in=self.request.GET.get('pk'))
+
+        return {
+            'model': self.model,
+            'queryset': self.queryset,
+        }
+
 class JsHackView(generic.TemplateView):
     template_name = 'admin_hack/hack.js'
 

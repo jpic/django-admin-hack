@@ -21,5 +21,6 @@ setup(
         'django_mptt (==0.5)',
         'django_admin_tools (==0.4.0)',
         'django_annoying',
+        'django_autoslug',
     ]
 )

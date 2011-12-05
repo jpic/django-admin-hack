@@ -12,6 +12,11 @@ urlpatterns = patterns('',
         name='admin_hack_js_hack'
     ),
     url(
+        r'^export/$',
+        views.ExportView.as_view(),
+        name='admin_hack_export',
+    ),
+    url(
         r'^userprofile/(?P<pk>[0-9]+)/update/$',
         csrf_exempt(views.AdminHackUserProfileUpdateView.as_view()),
         name='admin_hack_user_profile_update',
