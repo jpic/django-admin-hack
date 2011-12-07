@@ -32,6 +32,7 @@ class CustomValue(models.Model):
 
     kind = models.CharField(choices=KIND_CHOICES, max_length=10)
 
+    int_value = models.IntegerField(null=True, blank=True)
     float_value = models.FloatField(null=True, blank=True)
     char_value = models.CharField(max_length=255, null=True, blank=True)
     text_value = models.TextField(null=True, blank=True)
@@ -43,6 +44,17 @@ class CustomValue(models.Model):
     file_value = models.FileField(null=True, blank=True,
         upload_to='custom_value_files')
 
+    def save(self, *args, **kwargs):
+        for k, v in KIND_CHOICES:
+            val = getattr(self, k + '_value', None)
+            if val is not None:
+                self.kind = k
+                break
+        if not self.kind:
+            raise Exception('CustomValue *needs* a kind')
+        
+        super(CustomValue, self).save(*args, **kwargs)
+    
     @property
     def value(self):
         for k, v in KIND_CHOICES:
@@ -51,7 +63,7 @@ class CustomValue(models.Model):
                 return val
 
     def __unicode__(self):
-        return self.value
+        return u'%s' % self.value
 
     class Meta:
         ordering = ('name',)
