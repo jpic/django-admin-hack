@@ -43,6 +43,13 @@
         }
     }
 
+    {% if list_view %}
+    ListView = function() {
+        /*$(document).bind('admin_hack.ListView.checkItem', function(e) {
+        });*/
+    }
+    {% endif %}
+
     {% if change_view %}
     ChangeView = function(forms) {
         this.forms = forms;
@@ -179,6 +186,21 @@
             change_view.select.val({{ last_form_pk }});
             change_view.select.trigger('change');
         {% endif %}
+
+
+    $('div.tabular.inline-related table').each(function() {
+        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
+            $(this).find('thead').hide();
+        }
+    });
+    $('.add-row a').live('click', function(e) {
+        console.log('hi live')
+        $(this).parents('table').find('thead').show();
+    });
+    $('.add-row a').click(function(e) {
+        console.log('hi click')
+        $(this).parents('table').find('thead').show();
+    });
     {% endif %}
 
     {% if list_view and smuggler %}
@@ -189,3 +211,14 @@
         $('ul.object-tools').append(html.join(''));
     {% endif %}
 }); })(django.jQuery)
+
+$ = jQuery = django.jQuery
+
+{% if load_jui %}
+if(!jQuery || (typeof jQuery.ui == 'undefined')) {
+	document.write('<script type="text/javascript"  src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"><\/script>');
+	document.write('<link type="text/css" rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/smoothness/jquery-ui.css" />');
+}
+
+jQuery = django.jQuery = $;
+{% endif %}
