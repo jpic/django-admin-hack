@@ -7,8 +7,16 @@ from django.db.models import signals
 from autoslug import AutoSlugField
 from annoying.fields import AutoOneToOneField
 
+def clean_customvalues(sender, instance=None, **kwargs):
+    if not hasattr(instance, 'customvalue_set'):
+        return
+    
+    instance.customvalue_set.all().delete()
+signals.pre_delete.connect(clean_customvalues)
+
 KIND_CHOICES = (
-    ('float', _('number')),
+    ('int', _('integer')),
+    ('float', _('decimal number')),
     ('char', _('short text')),
     ('text', _('text')),
     ('datetime', _('date and time')),
