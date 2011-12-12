@@ -30,8 +30,8 @@ def patch_admin(site, admin_hack_prefix='/admin_hack/'):
         media = options.media
         media.add_js(['%sjs/' % admin_hack_prefix])
         media.add_css({
-            'all': [settings.STATIC_URL + '/admin_hack/style.css']
+            'all': [settings.STATIC_URL + 'admin_hack/style.css']
         })
         options.__class__.media = media
 
-        options.__class__.actions.append(admin_export)
+        #options.__class__.actions.append(admin_export)

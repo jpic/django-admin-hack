@@ -7,7 +7,7 @@ import views
 
 urlpatterns = patterns('',
     url(
-        r'^js/$',
+        r'^hack.js$',
         views.JsHackView.as_view(),
         name='admin_hack_js_hack'
     ),

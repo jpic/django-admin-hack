@@ -1,5 +1,6 @@
 from django import http
 from django.views.decorators.csrf import csrf_exempt
+from django.views import generic
 
 from models import *
 from utils import *

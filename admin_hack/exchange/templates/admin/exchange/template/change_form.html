@@ -33,7 +33,7 @@
                 '{% url 'yourlabs_exchange_parser_form' %}',
                 get_data(),
                 function(data, textStatus, jqXHR) {
-                    $('form#parser').html(data);
+                    $('div.submit-row').prepend(data);
                 },
                 'html'
             );

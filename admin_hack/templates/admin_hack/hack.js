@@ -214,11 +214,4 @@
 
 $ = jQuery = django.jQuery
 
-{% if load_jui %}
-if(!jQuery || (typeof jQuery.ui == 'undefined')) {
-	document.write('<script type="text/javascript"  src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"><\/script>');
-	document.write('<link type="text/css" rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/smoothness/jquery-ui.css" />');
-}
-
-jQuery = django.jQuery = $;
 {% endif %}

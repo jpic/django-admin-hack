@@ -28,7 +28,7 @@ class ExportView(generic.TemplateView):
     template_name = 'admin_hack/export.html'
 
     def get_context_data(self, **kwargs):
-        self.model = get_model(request.GET.get('app'), request.GET.get('model'))
+        self.model = get_model(self.request.GET.get('app'), self.request.GET.get('model'))
         self.queryset = self.model.objects.filter(
             pk__in=self.request.GET.get('pk'))
 
@@ -79,5 +79,5 @@ class JsHackView(generic.TemplateView):
                 })
                 model = get_model(m.group('app'), m.group('model'))
                 c['model_verbose_name_plural'] = model._meta.verbose_name_plural
-        
+
         return c
