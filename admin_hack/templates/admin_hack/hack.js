@@ -2,6 +2,16 @@
 {% load i18n %}
 {% load admin_hack_tags %}
 
+function admin_hack_html_tag_factory(tag, attributes, contents) {
+    var html = '<' + tag;
+    for(var key in attributes) {
+        html += ' ' + key + '="' + attributes[key] + '"';
+    }   
+    html += '>' + contents
+    html += '</' + tag + '>';
+    return html;
+}
+
 (function($) { $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
@@ -59,15 +69,24 @@
             function(e, select, form) {
                 cv.form = form;
                 cv.updateForm(select, form);
+                if (cv.form.name == 'full') {
+                    $('.hide_on_full').slideUp();
+                } else {
+                    $('.hide_on_full').slideDown();
+                }
             }
         );
     }
 
     ChangeView.prototype = {
-        installSelect: function(main) {
-            main.prev().css('display', 'inline');
-            main.before(change_view.renderSelect());
-            this.select = main.prev();
+        install: function(main) {
+            if (!$('#admin_hack').length) {
+                main.find('.object_tool').before('<div id="admin_hack"></div>');
+            }
+            this.container = $('#admin_hack');
+            this.container.prepend(change_view.renderSelect());
+            this.select = this.container.find('select');
+
             cv = this;
             this.select.change(function() {
                 for ( var i in cv.forms ) {
@@ -78,6 +97,61 @@
                         );
                         break;
                     }
+                }
+            });
+
+            this.container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Hide field' %}",
+                'id': 'admin_hack_mode_hide',
+            }, "{% trans 'Remove field' %}"));
+            this.container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Show field' %}",
+                'id': 'admin_hack_show_field_toggler',
+            }, "{% trans 'Add field' %}"));
+
+            $('#admin_hack_mode_hide').click(function() {
+                if (!cv.mode) {
+                    cv.mode = 'hide';
+                    $('label').each(function() {
+                        if ($(this).hasClass('required')) {
+                            return
+                        }
+
+                        $(this).append('<span class="btn danger admin_hack_mode_hide" title="{% trans 'Hide this field' %}">{% trans 'Remove' %}</span>')
+                    });
+                } else if (cv.mode == 'hide') {
+                    cv.mode = false;
+                    $('.admin_hack_mode_hide').hide();
+                }
+            });
+
+            $('.admin_hack_mode_hide').live('click', function() {
+                var strip_id_re = /^id_/;
+                var id = $(this).parent().attr('for');
+                var name = id.replace(strip_id_re, '');
+
+                var is_autocomplete_re = /_text$/
+                if (name.match(is_autocomplete_re)) {
+                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+                        name = name.replace(is_autocomplete_re, '');
+                    }
+                }
+                for ( var i in cv.form.field_set ) {
+                    if (name == cv.form.field_set[i].name) {
+                        cv.form.field_set.splice(i, 1);
+                        cv.updateForm(cv.select, cv.form);
+                        break;
+                    }
+                }
+            });
+
+            $(document).bind('admin_hack.ChangeView.changeSelectForm', function() {
+                if (cv.mode) {
+                    $('#admin_hack_mode_' + cv.mode).click();
                 }
             });
         },
@@ -181,12 +255,11 @@
 
     var change_view = new ChangeView({{ forms_dict|as_json }});
     var main = $('#content-main')
-    change_view.installSelect(main, user_profile);
-        {% if last_form_pk %}
-            change_view.select.val({{ last_form_pk }});
-            change_view.select.trigger('change');
-        {% endif %}
-
+    change_view.install(main, user_profile);
+    {% if last_form_pk %}
+        change_view.select.val({{ last_form_pk }});
+        change_view.select.trigger('change');
+    {% endif %}
 
     $('div.tabular.inline-related table').each(function() {
         if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
