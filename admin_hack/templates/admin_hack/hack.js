@@ -16,6 +16,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
     
+    /* {{{ UserProfile */
     UserProfile = function(data) {
         this.data = data;
 
@@ -52,82 +53,95 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             );
         }
     }
+    /* }}} */
 
-    {% if list_view %}
-    ListView = function() {
-        /*$(document).bind('admin_hack.ListView.checkItem', function(e) {
-        });*/
-    }
-    {% endif %}
-
-    {% if change_view %}
-    ChangeView = function(forms) {
-        this.forms = forms;
-        var cv = this;
-
-        $(document).bind('admin_hack.ChangeView.changeSelectForm', 
-            function(e, select, form) {
-                cv.form = form;
-                cv.updateForm(select, form);
-                if (cv.form.name == 'full') {
-                    $('.hide_on_full').slideUp();
-                } else {
-                    $('.hide_on_full').slideDown();
-                }
+    /* {{{ ModeManager */
+    ModeManager = {
+        modes: [],
+        mode: false,
+        setMode: function(name) {
+            if (this.mode) {
+                this.mode.disable();
             }
-        );
-    }
 
-    ChangeView.prototype = {
-        install: function(main) {
-            if (!$('#admin_hack').length) {
-                main.find('.object_tool').before('<div id="admin_hack"></div>');
+            if (name) {
+                this.mode = this.modes[name];
+                this.mode.enable();
+            } else {
+                this.mode = false;
             }
-            this.container = $('#admin_hack');
-            this.container.prepend(change_view.renderSelect());
-            this.select = this.container.find('select');
+        },
+        install: function(cv) {
+            $(document).bind('admin_hack.ChangeView.changeSelectForm', 
+                function(e, select, form) {
+                    /* No modes for 'full' form */
+                    if (cv.form.name == 'full') {
+                        $('.hide_on_full').slideUp();
+                    } else {
+                        $('.hide_on_full').slideDown();
+                    }
 
-            cv = this;
-            this.select.change(function() {
-                for ( var i in cv.forms ) {
-                    if ( cv.forms[i].pk == $(this).val() ) {
-                        $(document).trigger(
-                            'admin_hack.ChangeView.changeSelectForm', 
-                            [$(this), cv.forms[i]]
-                        );
-                        break;
+                    /* Disable current mode on form change */
+                    if (ModeManager.mode) {
+                        ModeManager.mode.disable();
                     }
                 }
-            });
-
-            this.container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Hide field' %}",
-                'id': 'admin_hack_mode_hide',
-            }, "{% trans 'Remove field' %}"));
-            this.container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Show field' %}",
-                'id': 'admin_hack_show_field_toggler',
-            }, "{% trans 'Add field' %}"));
+            );
+        },
+        installMode: function(mode, view) {
+            this.modes[mode.name] = mode;
+            mode.install(view.container, view)
 
             $('#admin_hack_mode_hide').click(function() {
-                if (!cv.mode) {
-                    cv.mode = 'hide';
-                    $('label').each(function() {
-                        if ($(this).hasClass('required')) {
-                            return
-                        }
-
-                        $(this).append('<span class="btn danger admin_hack_mode_hide" title="{% trans 'Hide this field' %}">{% trans 'Remove' %}</span>')
-                    });
-                } else if (cv.mode == 'hide') {
-                    cv.mode = false;
-                    $('.admin_hack_mode_hide').hide();
+                if ($(this).hasClass('enabled')) {
+                    ModeManager.setMode()
+                } else {
+                    ModeManager.setMode(mode.name)
                 }
             });
+        }
+    }
+    /* }}} */
+
+    /* {{{ HideMode */
+    HideMode = function(name) {
+        this.name = name;
+        ModeManager.modes[name] = this;
+    }
+    HideMode.prototype = {
+        enable: function() {
+            $('label').each(function() {
+                if ($(this).hasClass('required')) {
+                    return
+                }
+                var remove_button = admin_hack_html_tag_factory('span', {
+                    'class': 'btn danger admin_hack_mode_hide',
+                    'title': "{% trans 'Hide this field' %}",
+                }, "{% trans 'Remove' %}");
+                
+                $(this).append(remove_button);
+            });
+
+            $('#admin_hack_mode_' + this.name).addClass('success');
+            $('#admin_hack_mode_' + this.name).addClass('enabled');
+            $('#admin_hack_mode_' + this.name).html(
+                "{% trans 'Save your changes' %}");
+            this.enabled = true;
+        },
+        disable: function() {
+            $('.admin_hack_mode_hide').hide();
+            $('#admin_hack_mode_' + this.name).removeClass('success');
+            $('#admin_hack_mode_' + this.name).removeClass('enabled');
+            $('#admin_hack_mode_' + this.name).html("{% trans 'Remove fields' %}");
+            this.enabled = false;
+        },
+        install: function(container, cv) {
+            container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Remove a field from the selected form model with the remove field mode' %}",
+                'id': 'admin_hack_mode_hide',
+            }, "{% trans 'Remove fields' %}"));
 
             $('.admin_hack_mode_hide').live('click', function() {
                 var strip_id_re = /^id_/;
@@ -148,12 +162,52 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                     }
                 }
             });
+        }
+    }
+    /* }}} */
 
-            $(document).bind('admin_hack.ChangeView.changeSelectForm', function() {
-                if (cv.mode) {
-                    $('#admin_hack_mode_' + cv.mode).click();
+    /* {{{ ChangeView */
+    ChangeView = function(forms) {
+        this.forms = forms;
+        var cv = this;
+
+        $(document).bind('admin_hack.ChangeView.changeSelectForm', 
+            function(e, select, form) {
+                cv.form = form;
+                cv.updateForm(select, form);
+            }
+        );
+    }
+
+    ChangeView.prototype = {
+        install: function(main) {
+            if (!$('#admin_hack').length) {
+                main.find('.object_tool').before('<div id="admin_hack"></div>');
+            }
+            this.container = $('#admin_hack');
+            this.container.append('<p>{% trans 'Select your form model:' %}</p>');
+            this.container.append(change_view.renderSelect());
+            this.select = this.container.find('select');
+
+            cv = this;
+            this.select.change(function() {
+                for ( var i in cv.forms ) {
+                    if ( cv.forms[i].pk == $(this).val() ) {
+                        $(document).trigger(
+                            'admin_hack.ChangeView.changeSelectForm', 
+                            [$(this), cv.forms[i]]
+                        );
+                        break;
+                    }
                 }
             });
+
+            this.container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Show field' %}",
+                'id': 'admin_hack_show_field_toggler',
+            }, "{% trans 'Add field' %}"));
         },
         updateForm: function(select, form) {
             cv = this;
@@ -250,41 +304,31 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             return html.join('');
         }
     }
+    /* }}} */
 
     var user_profile = new UserProfile({{ request.user.adminhackuserprofile.to_dict|as_json }});
 
-    var change_view = new ChangeView({{ forms_dict|as_json }});
-    var main = $('#content-main')
-    change_view.install(main, user_profile);
-    {% if last_form_pk %}
-        change_view.select.val({{ last_form_pk }});
-        change_view.select.trigger('change');
-    {% endif %}
+    {% if change_view %}
+        var change_view = new ChangeView({{ forms_dict|as_json }});
+        var main = $('#content-main')
+        change_view.install(main, user_profile);
 
-    $('div.tabular.inline-related table').each(function() {
-        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
-            $(this).find('thead').hide();
-        }
-    });
-    $('.add-row a').live('click', function(e) {
-        console.log('hi live')
-        $(this).parents('table').find('thead').show();
-    });
-    $('.add-row a').click(function(e) {
-        console.log('hi click')
-        $(this).parents('table').find('thead').show();
-    });
-    {% endif %}
+        ModeManager.install(change_view)
+        
+        var hide_mode = new HideMode('hide');
+        ModeManager.installMode(hide_mode, change_view);
 
-    {% if list_view and smuggler %}
-        var html = ['<li><a href="{% url 'dump-model-data' app model %}">'];
-        html.push('{% trans 'Export ' %} ')
-        html.push('{{ model_verbose_name_plural }}')
-        html.push('</a></li>')
-        $('ul.object-tools').append(html.join(''));
+            {% if last_form_pk %}
+                change_view.select.val({{ last_form_pk }});
+                change_view.select.trigger('change');
+            {% endif %}
+
+        $('div.tabular.inline-related table').each(function() {
+            if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
+                $(this).find('thead').hide();
+            }
+        });
     {% endif %}
 }); })(django.jQuery)
 
 $ = jQuery = django.jQuery
-
-{% endif %}
