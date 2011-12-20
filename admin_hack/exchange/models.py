@@ -3,6 +3,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from picklefield.fields import PickledObjectField
 
+from utils import *
 from settings import *
 
 class Upload(models.Model):
@@ -31,12 +32,17 @@ class Template(models.Model):
     contenttype = models.ForeignKey('contenttypes.contenttype', 
         verbose_name=_('database table'), 
         help_text=_('you are about to configure a form preset for this type'))
-    upload_sample = models.TextField(
+    upload_sample = models.TextField(null=True, blank=True,
         help_text=_('A sample upload for which this template should work'))
     parser_class = models.CharField(max_length=150, 
         choices=EXCHANGE_PARSER_CHOICES)
     parser = PickledObjectField(null=True, blank=True)
     
+    def save(self, *args, **kwargs):
+        cls = get_class(self.parser_class)
+        self.parser = cls()
+        return super(Template, self).save(*args, **kwargs)
+
     class Meta:
         ordering = ('name',)
 
