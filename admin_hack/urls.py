@@ -21,4 +21,9 @@ urlpatterns = patterns('',
         csrf_exempt(views.AdminHackUserProfileUpdateView.as_view()),
         name='admin_hack_user_profile_update',
     ),
+    url(
+        r'^forms/update/$',
+        csrf_exempt(views.AdminHackFormsUpdateView.as_view()),
+        name='admin_hack_forms_update',
+    ),
 )

@@ -112,6 +112,23 @@ class Form(models.Model):
             'absolute_url': self.get_absolute_url(),
         }
 
+    def from_dict(self, data):
+        self.name = data['name']
+        self.contenttype_id = data['contenttype']['pk']
+
+        names = []
+        for field_dict in data['field_set']:
+            if 'pk' in field_dict.keys():
+                field = Field.objects.get(pk=field_dict['pk'])
+                if field.name != field_dict['name']:
+                    field.name = field_dict['name']
+                    field.save()
+            else:
+                field = self.field_set.create(name=field_dict['name'])
+            names.append(field_dict['name'])
+        
+        self.field_set.exclude(name__in=names).delete()
+
 class Field(models.Model):
     form = models.ForeignKey('Form')
     name = models.CharField(max_length=100)

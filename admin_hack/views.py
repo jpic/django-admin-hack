@@ -13,6 +13,19 @@ from forms import *
 FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/$'
 LIST_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/$'
 
+class AdminHackFormsUpdateView(generic.View):
+    def post(self, request, *args, **kwargs):
+        data = simplejson.loads(request.POST['forms'])
+        for form_dict in data:
+            if 'pk' in form_dict.keys():
+                form = Form.objects.get(pk=form_dict['pk'])
+            else:
+                continue
+            
+            form.from_dict(form_dict)
+            form.save()
+        return http.HttpResponse('OK', status=201)
+
 class AdminHackUserProfileUpdateView(generic.UpdateView):
     form_class = AdminHackUserProfileForm
     model = AdminHackUserProfile

@@ -12,10 +12,24 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
+var head= document.getElementsByTagName('head')[0];
+var script= document.createElement('script');
+script.type= 'text/javascript';
+script.src='{{ STATIC_URL }}admin_hack/jquery.json.min.js';
+head.appendChild(script);
+
 (function($) { $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
-    
+ 
+    function save_forms(forms) {
+        $.post(
+            '{% url 'admin_hack_forms_update' %}', {
+                'forms': $.toJSON(forms),
+            }
+        );
+    }
+
     /* {{{ UserProfile */
     UserProfile = function(data) {
         this.data = data;
@@ -55,6 +69,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     }
     /* }}} */
 
+
     /* {{{ ModeManager */
     ModeManager = {
         modes: [],
@@ -72,6 +87,8 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             }
         },
         install: function(cv) {
+            this.cv = cv;
+
             $(document).bind('admin_hack.ChangeView.changeSelectForm', 
                 function(e, select, form) {
                     /* No modes for 'full' form */
@@ -83,16 +100,16 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
 
                     /* Disable current mode on form change */
                     if (ModeManager.mode) {
-                        ModeManager.mode.disable();
+                        ModeManager.mode.disable(this.cv);
                     }
                 }
             );
         },
-        installMode: function(mode, view) {
+        installMode: function(mode) {
             this.modes[mode.name] = mode;
-            mode.install(view.container, view)
+            mode.install(this.cv.container, this.cv)
 
-            $('#admin_hack_mode_hide').click(function() {
+            $('#admin_hack_mode_' + mode.name).click(function() {
                 if ($(this).hasClass('enabled')) {
                     ModeManager.setMode()
                 } else {
@@ -110,16 +127,16 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     }
     HideMode.prototype = {
         enable: function() {
+            var button = admin_hack_html_tag_factory('span', {
+                'class': 'btn danger admin_hack_mode_' + this.name,
+                'title': "{% trans 'Hide this field' %}",
+            }, "{% trans 'Remove' %}");
+
             $('label').each(function() {
                 if ($(this).hasClass('required')) {
                     return
                 }
-                var remove_button = admin_hack_html_tag_factory('span', {
-                    'class': 'btn danger admin_hack_mode_hide',
-                    'title': "{% trans 'Hide this field' %}",
-                }, "{% trans 'Remove' %}");
-                
-                $(this).append(remove_button);
+                $(this).append(button);
             });
 
             $('#admin_hack_mode_' + this.name).addClass('success');
@@ -129,21 +146,22 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             this.enabled = true;
         },
         disable: function() {
-            $('.admin_hack_mode_hide').hide();
+            $('.admin_hack_mode_' + this.name).hide();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
             $('#admin_hack_mode_' + this.name).html("{% trans 'Remove fields' %}");
             this.enabled = false;
+            $(document).trigger('admin_hack.ChangeView.save');
         },
         install: function(container, cv) {
             container.append(admin_hack_html_tag_factory('span', {
                 'class': 'btn hide_on_full',
                 'style': 'display:none',
                 'title': "{% trans 'Remove a field from the selected form model with the remove field mode' %}",
-                'id': 'admin_hack_mode_hide',
+                'id': 'admin_hack_mode_' + this.name,
             }, "{% trans 'Remove fields' %}"));
 
-            $('.admin_hack_mode_hide').live('click', function() {
+            $('.admin_hack_mode_' + this.name).live('click', function() {
                 var strip_id_re = /^id_/;
                 var id = $(this).parent().attr('for');
                 var name = id.replace(strip_id_re, '');
@@ -161,6 +179,64 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                         break;
                     }
                 }
+            });
+        }
+    }
+    /* }}} */
+    /* {{{ ShowMode */
+    ShowMode = function(name) {
+        this.name = name;
+        ModeManager.modes[name] = this;
+    }
+    ShowMode.prototype = {
+        enable: function() {
+            var button = admin_hack_html_tag_factory('span', {
+                'class': 'btn success admin_hack_mode_' + this.name,
+                'title': "{% trans 'Show this field in the current form configuration' %}",
+            }, "{% trans 'Keep' %}");
+
+            $('.admin_hack_hidden').each(function() {
+                $(this).removeClass('admin_hack_hidden');
+                $(this).find('label').append(button);
+            });
+
+            $('#admin_hack_mode_' + this.name).addClass('success');
+            $('#admin_hack_mode_' + this.name).addClass('enabled');
+            $('#admin_hack_mode_' + this.name).html(
+                "{% trans 'Save your changes' %}");
+            this.enabled = true;
+        },
+        disable: function() {
+            $('.admin_hack_mode_' + this.name).hide();
+            $('#admin_hack_mode_' + this.name).removeClass('success');
+            $('#admin_hack_mode_' + this.name).removeClass('enabled');
+            $('#admin_hack_mode_' + this.name).html("{% trans 'Add fields' %}");
+            this.enabled = false;
+            $(document).trigger('admin_hack.ChangeView.updateForm');
+            $(document).trigger('admin_hack.ChangeView.save');
+        },
+        install: function(container, cv) {
+            container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Show all fields available for your form model allowing you to click-choose which fields you want to add' %}",
+                'id': 'admin_hack_mode_' + this.name,
+            }, "{% trans 'Add fields' %}"));
+
+            $('.admin_hack_mode_' + this.name).live('click', function() {
+                var strip_id_re = /^id_/;
+                var id = $(this).parent().attr('for');
+                var name = id.replace(strip_id_re, '');
+
+                var is_autocomplete_re = /_text$/
+                if (name.match(is_autocomplete_re)) {
+                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+                        name = name.replace(is_autocomplete_re, '');
+                    }
+                }
+
+                cv.form.field_set.push({'name':name})
+                $(this).remove();
             });
         }
     }
@@ -202,12 +278,12 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                 }
             });
 
-            this.container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Show field' %}",
-                'id': 'admin_hack_show_field_toggler',
-            }, "{% trans 'Add field' %}"));
+            $(document).bind('admin_hack.ChangeView.updateForm', function() {
+                cv.updateForm(cv.select, cv.form);
+            });
+            $(document).bind('admin_hack.ChangeView.save', function() {
+                save_forms(cv.forms);
+            });
         },
         updateForm: function(select, form) {
             cv = this;
@@ -277,7 +353,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                 }
 
                 /* if all rows are hidden then hide the module */
-                console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible'));
+                /* console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible')); */
                 if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
                     $(this).addClass('admin_hack_hidden');
                     $(this).find('h2').addClass('admin_hack_hidden');
@@ -302,7 +378,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             }
 
             return html.join('');
-        }
+        },
     }
     /* }}} */
 
@@ -317,6 +393,9 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
         
         var hide_mode = new HideMode('hide');
         ModeManager.installMode(hide_mode, change_view);
+
+        var show_mode = new ShowMode('show');
+        ModeManager.installMode(show_mode, change_view);
 
             {% if last_form_pk %}
                 change_view.select.val({{ last_form_pk }});
