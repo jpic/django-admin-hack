@@ -12,12 +12,6 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
-var head= document.getElementsByTagName('head')[0];
-var script= document.createElement('script');
-script.type= 'text/javascript';
-script.src='{{ STATIC_URL }}admin_hack/jquery.json.min.js';
-head.appendChild(script);
-
 (function($) { $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
