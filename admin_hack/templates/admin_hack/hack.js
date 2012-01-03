@@ -2,6 +2,8 @@
 {% load i18n %}
 {% load admin_hack_tags %}
 
+$ = jQuery = django.jQuery
+
 function admin_hack_html_tag_factory(tag, attributes, contents) {
     var html = '<' + tag;
     for(var key in attributes) {
@@ -12,7 +14,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
-(function($) { $(document).ready(function() {
+$(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
  
@@ -114,7 +116,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     }
     /* }}} */
 
-    /* {{{ HideMode */
+       /* {{{ HideMode */
     HideMode = function(name) {
         this.name = name;
         ModeManager.modes[name] = this;
@@ -140,7 +142,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             this.enabled = true;
         },
         disable: function() {
-            $('.admin_hack_mode_' + this.name).hide();
+            $('.admin_hack_mode_' + this.name).remove();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
             $('#admin_hack_mode_' + this.name).html("{% trans 'Remove fields' %}");
@@ -189,9 +191,11 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                 'title': "{% trans 'Show this field in the current form configuration' %}",
             }, "{% trans 'Keep' %}");
 
+            var mode = this;
             $('.admin_hack_hidden').each(function() {
                 $(this).removeClass('admin_hack_hidden');
-                $(this).find('label').append(button);
+                if (! $(this).find('label').find('.admin_hack_mode_' + mode.name).length) 
+                    $(this).find('label').append(button);
             });
 
             $('#admin_hack_mode_' + this.name).addClass('success');
@@ -201,7 +205,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             this.enabled = true;
         },
         disable: function() {
-            $('.admin_hack_mode_' + this.name).hide();
+            $('.admin_hack_mode_' + this.name).remove();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
             $('#admin_hack_mode_' + this.name).html("{% trans 'Add fields' %}");
@@ -229,9 +233,92 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
                     }
                 }
 
-                cv.form.field_set.push({'name':name})
+                cv.form.field_set.push({
+                    'name':name,
+                })
+                $(document).trigger('admin_hack.ShowMode.addField');
                 $(this).remove();
             });
+        }
+    }
+    /* }}} */
+    /* {{{ OrderMode */
+    OrderMode = function(name) {
+        this.name = name;
+        ModeManager.modes[name] = this;
+    }
+    OrderMode.prototype = {
+        enable: function() {
+            $('fieldset.collapsed .collapse-toggle').click();
+
+            $('fieldset:not(.inline-related fieldset)').sortable({
+                connectWith: 'fieldset',
+                forcePlaceholderSize: true,
+                placeholder: 'ui-state-highlight',
+                items: '.form-row',
+            }).disableSelection();
+
+            $('#admin_hack_mode_' + this.name).addClass('success');
+            $('#admin_hack_mode_' + this.name).addClass('enabled');
+            $('#admin_hack_mode_' + this.name).html(
+                "{% trans 'Save your changes' %}");
+            this.enabled = true;
+        },
+        disable: function() {
+            $('fieldset').sortable('disable');
+            $('.admin_hack_mode_' + this.name).remove();
+            $('#admin_hack_mode_' + this.name).removeClass('success');
+            $('#admin_hack_mode_' + this.name).removeClass('enabled');
+            $('#admin_hack_mode_' + this.name).html("{% trans 'Reorder fields' %}");
+            this.enabled = false;
+            $(document).trigger('admin_hack.OrderMode.updateOrder');
+            $(document).trigger('admin_hack.ChangeView.save');
+        },
+        install: function(container, cv) {
+            container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Reorder the fields by drag\'n\'drop' %}",
+                'id': 'admin_hack_mode_' + this.name,
+            }, "{% trans 'Reorder fields' %}"));
+
+
+            $(document).bind('admin_hack.ShowMode.addField', this.updateOrder);
+            $(document).bind('admin_hack.OrderMode.updateOrder', this.updateOrder);
+        },
+        updateOrder: function() {
+            console.log('update order');
+            var new_field_set = [];
+            var order = 0;
+            $('fieldset .form-row').each(function() {
+                if ($(this).hasClass('admin_hack_hidden')) {
+                    return
+                }
+
+                var strip_id_re = /^id_/;
+                var id = $(this).find('label').attr('for');
+                var name = id.replace(strip_id_re, '');
+
+                var is_autocomplete_re = /_text$/
+                if (name.match(is_autocomplete_re)) {
+                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+                        name = name.replace(is_autocomplete_re, '');
+                    }
+                }
+
+
+                for ( var i in cv.form.field_set ) {
+                    if (name == cv.form.field_set[i].name) {
+                        cv.form.field_set[i].order = order;
+                        order = order + 1;
+                        new_field_set.push(cv.form.field_set[i]);
+                        break;
+                    }
+                }
+            });
+
+            cv.form.field_set = new_field_set
+            console.log(cv.form.field_set);
         }
     }
     /* }}} */
@@ -390,6 +477,9 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
 
         var show_mode = new ShowMode('show');
         ModeManager.installMode(show_mode, change_view);
+        
+        var order_mode = new OrderMode('order');
+        ModeManager.installMode(order_mode, change_view);
 
             {% if last_form_pk %}
                 change_view.select.val({{ last_form_pk }});
@@ -402,6 +492,4 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
             }
         });
     {% endif %}
-}); })(django.jQuery)
-
-$ = jQuery = django.jQuery
+});

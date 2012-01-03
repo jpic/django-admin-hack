@@ -22,6 +22,9 @@ class AdminHackFormsUpdateView(generic.View):
             else:
                 continue
             
+            if form_dict['name'] == 'simple':
+                for f in form_dict['field_set']:
+                    print f
             form.from_dict(form_dict)
             form.save()
         return http.HttpResponse('OK', status=201)

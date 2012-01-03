@@ -120,11 +120,12 @@ class Form(models.Model):
         for field_dict in data['field_set']:
             if 'pk' in field_dict.keys():
                 field = Field.objects.get(pk=field_dict['pk'])
-                if field.name != field_dict['name']:
-                    field.name = field_dict['name']
-                    field.save()
+                field.name = field_dict['name']
+                field.order = field_dict['order']
+                field.save()
             else:
-                field = self.field_set.create(name=field_dict['name'])
+                field = self.field_set.create(name=field_dict['name'], 
+                    order=field_dict['order'])
             names.append(field_dict['name'])
         
         self.field_set.exclude(name__in=names).delete()
@@ -132,9 +133,14 @@ class Form(models.Model):
 class Field(models.Model):
     form = models.ForeignKey('Form')
     name = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ('order',)
 
     def to_dict(self):
         return {
             'pk': self.pk,
             'name': self.name,
+            'order': self.order,
         }
