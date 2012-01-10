@@ -14,6 +14,44 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
+var strip_id_re = /^id_/;
+var is_autocomplete_re = /_text$/
+function get_field_name(e) {
+    if (!e.is('.form-row')) {
+        e = e.parents('.form-row');
+    }
+
+    var id = e.find('label').attr('for');
+    var name = id.replace(strip_id_re, '');
+
+    if (name.match(is_autocomplete_re)) {
+        if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+            name = name.replace(is_autocomplete_re, '');
+        }
+    }
+
+    return name
+}
+
+function get_field_container(name) {
+    return $('.form-row.' + name);
+}
+
+var fieldset_re = /[^(]+/;
+function get_field_fieldset(e) {
+    if (!e.is('.form-row')) {
+        e = e.parents('.form-row');
+    }
+    var fieldset = e.parents('fieldset');
+    var h2 = fieldset.find('h2');
+    if (h2.length) {
+        fieldset = $.trim(h2.html().match(fieldset_re));
+    } else {
+        fieldset = ''
+    }
+    return fieldset;
+}
+
 $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
@@ -158,16 +196,8 @@ $(document).ready(function() {
             }, "{% trans 'Remove fields' %}"));
 
             $('.admin_hack_mode_' + this.name).live('click', function() {
-                var strip_id_re = /^id_/;
-                var id = $(this).parent().attr('for');
-                var name = id.replace(strip_id_re, '');
-
-                var is_autocomplete_re = /_text$/
-                if (name.match(is_autocomplete_re)) {
-                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-                        name = name.replace(is_autocomplete_re, '');
-                    }
-                }
+                var name = get_field_name($(this));
+                
                 for ( var i in cv.form.field_set ) {
                     if (name == cv.form.field_set[i].name) {
                         cv.form.field_set.splice(i, 1);
@@ -222,17 +252,7 @@ $(document).ready(function() {
             }, "{% trans 'Add fields' %}"));
 
             $('.admin_hack_mode_' + this.name).live('click', function() {
-                var strip_id_re = /^id_/;
-                var id = $(this).parent().attr('for');
-                var name = id.replace(strip_id_re, '');
-
-                var is_autocomplete_re = /_text$/
-                if (name.match(is_autocomplete_re)) {
-                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-                        name = name.replace(is_autocomplete_re, '');
-                    }
-                }
-
+                var name = get_field_name($(this));
                 cv.form.field_set.push({
                     'name':name,
                 })
@@ -256,7 +276,7 @@ $(document).ready(function() {
                 forcePlaceholderSize: true,
                 placeholder: 'ui-state-highlight',
                 items: '.form-row',
-            }).disableSelection();
+            });
 
             $('#admin_hack_mode_' + this.name).addClass('success');
             $('#admin_hack_mode_' + this.name).addClass('enabled');
@@ -265,7 +285,7 @@ $(document).ready(function() {
             this.enabled = true;
         },
         disable: function() {
-            $('fieldset').sortable('disable');
+            $('fieldset').sortable('destroy');
             $('.admin_hack_mode_' + this.name).remove();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
@@ -287,7 +307,6 @@ $(document).ready(function() {
             $(document).bind('admin_hack.OrderMode.updateOrder', this.updateOrder);
         },
         updateOrder: function() {
-            console.log('update order');
             var new_field_set = [];
             var order = 0;
             $('fieldset .form-row').each(function() {
@@ -295,21 +314,13 @@ $(document).ready(function() {
                     return
                 }
 
-                var strip_id_re = /^id_/;
-                var id = $(this).find('label').attr('for');
-                var name = id.replace(strip_id_re, '');
-
-                var is_autocomplete_re = /_text$/
-                if (name.match(is_autocomplete_re)) {
-                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-                        name = name.replace(is_autocomplete_re, '');
-                    }
-                }
-
+                var name = get_field_name($(this));
+                var fieldset = get_field_fieldset($(this));
 
                 for ( var i in cv.form.field_set ) {
                     if (name == cv.form.field_set[i].name) {
                         cv.form.field_set[i].order = order;
+                        cv.form.field_set[i].fieldset = fieldset;
                         order = order + 1;
                         new_field_set.push(cv.form.field_set[i]);
                         break;
@@ -318,7 +329,6 @@ $(document).ready(function() {
             });
 
             cv.form.field_set = new_field_set
-            console.log(cv.form.field_set);
         }
     }
     /* }}} */
@@ -369,9 +379,53 @@ $(document).ready(function() {
         updateForm: function(select, form) {
             cv = this;
 
+            /* let's re-order some fields yay */
+            var previous, e;
+            for(var i=0; i < form.field_set.length; i++) {
+                e = get_field_container(form.field_set[i].name);
+
+                var fieldset;
+                if (form.field_set[i].fieldset) {
+                    $('fieldset h2').each(function() {
+                        if($(this).html().match(form.field_set[i].fieldset)) {
+                            fieldset = $(this);
+                        }
+                    });
+                }
+
+                if (fieldset && form.field_set[i].fieldset != form.field_set[i-1].fieldset) {
+                    fieldset.after(e);
+                } else if (previous) {
+                    e.insertAfter(previous);
+                } else {
+                    $('fieldset:first').prepend(e);
+                }
+
+                previous = e;
+            }
+
+            /* let's hide un-necessary fields */
+            $('.form-row').each(function() {
+                var name = get_field_name($(this));
+                var found = false;
+
+                for (i=0; i < form.field_set.length; i++) {
+                    if (name == form.field_set[i].name) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    $(this).removeClass('admin_hack_hidden');
+                } else {
+                    $(this).addClass('admin_hack_hidden');
+                }
+            });
+
+            /* old code
             $('.form-row').each(function() {
                 if ($(this).find('.field-box').length > 0) {
-                    /* pass on form rows with multiple fields */
                     return;
                 }
 
@@ -426,6 +480,7 @@ $(document).ready(function() {
                     $(this).removeClass('admin_hack_hidden');
                 }
             });
+            */
 
             $('fieldset.module').each(function() {
                 /* pass on inlines for the moment */
@@ -443,6 +498,7 @@ $(document).ready(function() {
                     $(this).find('h2').removeClass('admin_hack_hidden');
                 }
             });
+
         },
         renderSelect: function() {
             if (!this.forms.length) {

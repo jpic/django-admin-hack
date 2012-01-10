@@ -5,9 +5,6 @@
 {% block content %}
     {{ block.super }}
     
-    <form id="parser">
-    </form>
-
     <script type="text/javascript">
     (function($) { $(document).ready(function() {
         // make jQuery compatible with django
@@ -21,6 +18,8 @@
             $('select[name=parser_class] option:selected').html());
         $('select[name=parser_class]').hide()
 
+        $('div.submit-row').prepend('<div id="parser"></div>');
+
         function get_data() {
             data = 'pk={{ original.pk }}';
             $('form').each(function() {
@@ -33,14 +32,17 @@
                 '{% url 'yourlabs_exchange_parser_form' %}',
                 get_data(),
                 function(data, textStatus, jqXHR) {
-                    $('div.submit-row').prepend(data);
+                    $('#parser').html(data);
+                    $('input[name=_parser_action][type=text]').autocomplete({
+                        'source': {{ field_names_json|safe }},
+                    });
                 },
                 'html'
             );
         }
 
         post_data();
-        $('form#parser input').live('change', function() {
+        $('form').submit(function() {
             post_data();
         });
         {% endif %}

@@ -39,8 +39,9 @@ class Template(models.Model):
     parser = PickledObjectField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
-        cls = get_class(self.parser_class)
-        self.parser = cls()
+        if getattr(self, 'parser', None) is None:
+            cls = get_class(self.parser_class)
+            self.parser = cls()
         return super(Template, self).save(*args, **kwargs)
 
     class Meta:
