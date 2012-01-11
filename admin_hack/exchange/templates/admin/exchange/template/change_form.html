@@ -18,7 +18,7 @@
             $('select[name=parser_class] option:selected').html());
         $('select[name=parser_class]').hide()
 
-        $('div.submit-row').prepend('<div id="parser"></div>');
+        $('div.submit-row').before('<div id="parser"></div>');
 
         function get_data() {
             data = 'pk={{ original.pk }}';

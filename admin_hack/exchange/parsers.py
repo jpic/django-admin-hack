@@ -108,23 +108,28 @@ class CsvParser(object):
             setattr(model, action, value)
 
     def configuration_form(self, request):
-        reader = unicode_csv_reader(request.POST['upload_sample'].split("\n"),
-            skipinitialspace=True)
-        rows = [row for row in reader]
-
-        if '_parser_action' in request.POST.keys():
-            self.actions = request.POST.getlist('_parser_action')
-        elif self.actions is None:
-            self.actions = ['' for x in rows[0]]
-
         if '_field_delimiter' in request.POST.keys():
             self.field_delimiter = request.POST['_field_delimiter']
         else:
             self.field_delimiter = ';'
 
+        delimiter = self.field_delimiter
+        if self.field_delimiter == 'TAB':
+            self.field_delimiter = "\t"
+
+        reader = unicode_csv_reader(request.POST['upload_sample'].split("\n"),
+            skipinitialspace=True, delimiter=self.field_delimiter)
+        rows = [row for row in reader]
+
+        if '_parser_action' in request.POST.keys():
+            self.actions = request.POST.getlist('_parser_action')
+        elif self.actions in (None, [u'']):
+            self.actions = ['' for x in rows[0]]
+
         context = {
             'rows': rows,
             'actions': self.actions,
+            'delimiter': delimiter,
         }
 
         return shortcuts.render(request, 
