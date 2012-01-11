@@ -15,12 +15,14 @@ class ImageArchiveProcessor(object):
 class CsvParser(object):
     def __init__(self):
         self.actions = None
+        self.field_delimiter = ','
 
     def load(self, upload, max_rows=None):
         model_class = upload.template.contenttype.model_class()
         
         f = open(upload.upload.path, 'rb')
-        reader = csv.reader(f)
+        print 'delim', self.field_delimiter
+        reader = csv.reader(f, delimiter=self.field_delimiter)
 
         row_count = 0
         for row in reader:
@@ -114,6 +116,11 @@ class CsvParser(object):
             self.actions = request.POST.getlist('_parser_action')
         elif self.actions is None:
             self.actions = ['' for x in rows[0]]
+
+        if '_field_delimiter' in request.POST.keys():
+            self.field_delimiter = request.POST['_field_delimiter']
+        else:
+            self.field_delimiter = ';'
 
         context = {
             'rows': rows,
