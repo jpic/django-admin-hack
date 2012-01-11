@@ -2,6 +2,8 @@
 {% load i18n %}
 {% load admin_hack_tags %}
 
+$ = jQuery = django.jQuery
+
 function admin_hack_html_tag_factory(tag, attributes, contents) {
     var html = '<' + tag;
     for(var key in attributes) {
@@ -12,13 +14,45 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
-var head= document.getElementsByTagName('head')[0];
-var script= document.createElement('script');
-script.type= 'text/javascript';
-script.src='{{ STATIC_URL }}admin_hack/jquery.json.min.js';
-head.appendChild(script);
+var strip_id_re = /^id_/;
+var is_autocomplete_re = /_text$/
+function get_field_name(e) {
+    if (!e.is('.form-row')) {
+        e = e.parents('.form-row');
+    }
 
-(function($) { $(document).ready(function() {
+    var id = e.find('label').attr('for');
+    var name = id.replace(strip_id_re, '');
+
+    if (name.match(is_autocomplete_re)) {
+        if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+            name = name.replace(is_autocomplete_re, '');
+        }
+    }
+
+    return name
+}
+
+function get_field_container(name) {
+    return $('.form-row.' + name);
+}
+
+var fieldset_re = /[^(]+/;
+function get_field_fieldset(e) {
+    if (!e.is('.form-row')) {
+        e = e.parents('.form-row');
+    }
+    var fieldset = e.parents('fieldset');
+    var h2 = fieldset.find('h2');
+    if (h2.length) {
+        fieldset = $.trim(h2.html().match(fieldset_re));
+    } else {
+        fieldset = ''
+    }
+    return fieldset;
+}
+
+$(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
  
@@ -120,7 +154,7 @@ head.appendChild(script);
     }
     /* }}} */
 
-    /* {{{ HideMode */
+       /* {{{ HideMode */
     HideMode = function(name) {
         this.name = name;
         ModeManager.modes[name] = this;
@@ -146,7 +180,7 @@ head.appendChild(script);
             this.enabled = true;
         },
         disable: function() {
-            $('.admin_hack_mode_' + this.name).hide();
+            $('.admin_hack_mode_' + this.name).remove();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
             $('#admin_hack_mode_' + this.name).html("{% trans 'Remove fields' %}");
@@ -162,16 +196,8 @@ head.appendChild(script);
             }, "{% trans 'Remove fields' %}"));
 
             $('.admin_hack_mode_' + this.name).live('click', function() {
-                var strip_id_re = /^id_/;
-                var id = $(this).parent().attr('for');
-                var name = id.replace(strip_id_re, '');
-
-                var is_autocomplete_re = /_text$/
-                if (name.match(is_autocomplete_re)) {
-                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-                        name = name.replace(is_autocomplete_re, '');
-                    }
-                }
+                var name = get_field_name($(this));
+                
                 for ( var i in cv.form.field_set ) {
                     if (name == cv.form.field_set[i].name) {
                         cv.form.field_set.splice(i, 1);
@@ -195,9 +221,11 @@ head.appendChild(script);
                 'title': "{% trans 'Show this field in the current form configuration' %}",
             }, "{% trans 'Keep' %}");
 
+            var mode = this;
             $('.admin_hack_hidden').each(function() {
                 $(this).removeClass('admin_hack_hidden');
-                $(this).find('label').append(button);
+                if (! $(this).find('label').find('.admin_hack_mode_' + mode.name).length) 
+                    $(this).find('label').append(button);
             });
 
             $('#admin_hack_mode_' + this.name).addClass('success');
@@ -207,7 +235,7 @@ head.appendChild(script);
             this.enabled = true;
         },
         disable: function() {
-            $('.admin_hack_mode_' + this.name).hide();
+            $('.admin_hack_mode_' + this.name).remove();
             $('#admin_hack_mode_' + this.name).removeClass('success');
             $('#admin_hack_mode_' + this.name).removeClass('enabled');
             $('#admin_hack_mode_' + this.name).html("{% trans 'Add fields' %}");
@@ -224,20 +252,83 @@ head.appendChild(script);
             }, "{% trans 'Add fields' %}"));
 
             $('.admin_hack_mode_' + this.name).live('click', function() {
-                var strip_id_re = /^id_/;
-                var id = $(this).parent().attr('for');
-                var name = id.replace(strip_id_re, '');
-
-                var is_autocomplete_re = /_text$/
-                if (name.match(is_autocomplete_re)) {
-                    if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-                        name = name.replace(is_autocomplete_re, '');
-                    }
-                }
-
-                cv.form.field_set.push({'name':name})
+                var name = get_field_name($(this));
+                cv.form.field_set.push({
+                    'name':name,
+                })
+                $(document).trigger('admin_hack.ShowMode.addField');
                 $(this).remove();
             });
+        }
+    }
+    /* }}} */
+    /* {{{ OrderMode */
+    OrderMode = function(name) {
+        this.name = name;
+        ModeManager.modes[name] = this;
+    }
+    OrderMode.prototype = {
+        enable: function() {
+            $('fieldset.collapsed .collapse-toggle').click();
+
+            $('fieldset:not(.inline-related fieldset)').sortable({
+                connectWith: 'fieldset',
+                forcePlaceholderSize: true,
+                placeholder: 'ui-state-highlight',
+                items: '.form-row',
+            });
+
+            $('#admin_hack_mode_' + this.name).addClass('success');
+            $('#admin_hack_mode_' + this.name).addClass('enabled');
+            $('#admin_hack_mode_' + this.name).html(
+                "{% trans 'Save your changes' %}");
+            this.enabled = true;
+        },
+        disable: function() {
+            $('fieldset').sortable('destroy');
+            $('.admin_hack_mode_' + this.name).remove();
+            $('#admin_hack_mode_' + this.name).removeClass('success');
+            $('#admin_hack_mode_' + this.name).removeClass('enabled');
+            $('#admin_hack_mode_' + this.name).html("{% trans 'Reorder fields' %}");
+            this.enabled = false;
+            $(document).trigger('admin_hack.OrderMode.updateOrder');
+            $(document).trigger('admin_hack.ChangeView.save');
+        },
+        install: function(container, cv) {
+            container.append(admin_hack_html_tag_factory('span', {
+                'class': 'btn hide_on_full',
+                'style': 'display:none',
+                'title': "{% trans 'Reorder the fields by drag\'n\'drop' %}",
+                'id': 'admin_hack_mode_' + this.name,
+            }, "{% trans 'Reorder fields' %}"));
+
+
+            $(document).bind('admin_hack.ShowMode.addField', this.updateOrder);
+            $(document).bind('admin_hack.OrderMode.updateOrder', this.updateOrder);
+        },
+        updateOrder: function() {
+            var new_field_set = [];
+            var order = 0;
+            $('fieldset .form-row').each(function() {
+                if ($(this).hasClass('admin_hack_hidden')) {
+                    return
+                }
+
+                var name = get_field_name($(this));
+                var fieldset = get_field_fieldset($(this));
+
+                for ( var i in cv.form.field_set ) {
+                    if (name == cv.form.field_set[i].name) {
+                        cv.form.field_set[i].order = order;
+                        cv.form.field_set[i].fieldset = fieldset;
+                        order = order + 1;
+                        new_field_set.push(cv.form.field_set[i]);
+                        break;
+                    }
+                }
+            });
+
+            cv.form.field_set = new_field_set
         }
     }
     /* }}} */
@@ -288,9 +379,53 @@ head.appendChild(script);
         updateForm: function(select, form) {
             cv = this;
 
+            /* let's re-order some fields yay */
+            var previous, e;
+            for(var i=0; i < form.field_set.length; i++) {
+                e = get_field_container(form.field_set[i].name);
+
+                var fieldset;
+                if (form.field_set[i].fieldset) {
+                    $('fieldset h2').each(function() {
+                        if($(this).html().match(form.field_set[i].fieldset)) {
+                            fieldset = $(this);
+                        }
+                    });
+                }
+
+                if (fieldset && form.field_set[i].fieldset != form.field_set[i-1].fieldset) {
+                    fieldset.after(e);
+                } else if (previous) {
+                    e.insertAfter(previous);
+                } else {
+                    $('fieldset:first').prepend(e);
+                }
+
+                previous = e;
+            }
+
+            /* let's hide un-necessary fields */
+            $('.form-row').each(function() {
+                var name = get_field_name($(this));
+                var found = false;
+
+                for (i=0; i < form.field_set.length; i++) {
+                    if (name == form.field_set[i].name) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    $(this).removeClass('admin_hack_hidden');
+                } else {
+                    $(this).addClass('admin_hack_hidden');
+                }
+            });
+
+            /* old code
             $('.form-row').each(function() {
                 if ($(this).find('.field-box').length > 0) {
-                    /* pass on form rows with multiple fields */
                     return;
                 }
 
@@ -345,6 +480,7 @@ head.appendChild(script);
                     $(this).removeClass('admin_hack_hidden');
                 }
             });
+            */
 
             $('fieldset.module').each(function() {
                 /* pass on inlines for the moment */
@@ -362,6 +498,7 @@ head.appendChild(script);
                     $(this).find('h2').removeClass('admin_hack_hidden');
                 }
             });
+
         },
         renderSelect: function() {
             if (!this.forms.length) {
@@ -396,6 +533,9 @@ head.appendChild(script);
 
         var show_mode = new ShowMode('show');
         ModeManager.installMode(show_mode, change_view);
+        
+        var order_mode = new OrderMode('order');
+        ModeManager.installMode(order_mode, change_view);
 
             {% if last_form_pk %}
                 change_view.select.val({{ last_form_pk }});
@@ -408,6 +548,4 @@ head.appendChild(script);
             }
         });
     {% endif %}
-}); })(django.jQuery)
-
-$ = jQuery = django.jQuery
+});

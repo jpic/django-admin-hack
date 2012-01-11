@@ -3,9 +3,13 @@ from django.contrib import admin
 from django.db import models
 from django.utils.translation import ugettext as _
 from django.db.models import signals
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes import generic
 
 from autoslug import AutoSlugField
 from annoying.fields import AutoOneToOneField
+
+__all__ = ['CustomValue', 'AdminHackUserProfile', 'FormForModel', 'Form', 'Field']
 
 def clean_customvalues(sender, instance=None, **kwargs):
     if not hasattr(instance, 'customvalue_set'):
@@ -77,7 +81,17 @@ class AdminHackUserProfile(models.Model):
             'forms': [f.to_dict() for f in self.forms.all()],
             'pk': self.pk,
         }
-    
+
+class FormForModel(models.Model):
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
+
+    form = models.ForeignKey('Form')
+
+    def __unicode__(self):
+        return u'%s %s' % (self.form, self.content_object)
+
 class Form(models.Model):
     contenttype = models.ForeignKey('contenttypes.contenttype', 
         verbose_name=_('form'), 
@@ -120,11 +134,13 @@ class Form(models.Model):
         for field_dict in data['field_set']:
             if 'pk' in field_dict.keys():
                 field = Field.objects.get(pk=field_dict['pk'])
-                if field.name != field_dict['name']:
-                    field.name = field_dict['name']
-                    field.save()
+                field.name = field_dict['name']
+                field.order = field_dict['order']
+                field.fieldset = field_dict['fieldset']
+                field.save()
             else:
-                field = self.field_set.create(name=field_dict['name'])
+                field = self.field_set.create(name=field_dict['name'], 
+                    order=field_dict['order'], fieldset=field_dict['fieldset'])
             names.append(field_dict['name'])
         
         self.field_set.exclude(name__in=names).delete()
@@ -132,9 +148,22 @@ class Form(models.Model):
 class Field(models.Model):
     form = models.ForeignKey('Form')
     name = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+    fieldset = models.CharField(max_length=100, null=True, blank=True)
+
+    def __unicode__(self):
+        if self.fieldset:
+            return u'%s: %s' % (self.name, self.fieldset)
+        else:
+            return self.name
+
+    class Meta:
+        ordering = ('order',)
 
     def to_dict(self):
         return {
             'pk': self.pk,
             'name': self.name,
+            'order': self.order,
+            'fieldset': self.fieldset,
         }
