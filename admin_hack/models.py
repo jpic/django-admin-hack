@@ -9,6 +9,8 @@ from django.contrib.contenttypes import generic
 from autoslug import AutoSlugField
 from annoying.fields import AutoOneToOneField
 
+__all__ = ['CustomValue', 'AdminHackUserProfile', 'FormForModel', 'Form', 'Field']
+
 def clean_customvalues(sender, instance=None, **kwargs):
     if not hasattr(instance, 'customvalue_set'):
         return
