@@ -58,54 +58,106 @@ class CsvParser(object):
         kind_choices = [x + '_value' for x, y in KIND_CHOICES]
         action = action.strip()
 
-        if len(action) == 0 or action[0] == '#' or not value:
+        if len(action) == 0 or action[0] == '#' or action[0] == '$' or not value:
             return
 
-        m = re.match(r'^(?P<day>[0-9]{1,2})/(?P<month>[0-9]{1,2})/(?P<year>[0-9]{4})$', value)
-        if m:
-            value = '%s-%s-%s' % (
-                m.group('year'), m.group('month'), m.group('day'))
+        def get_date_value(value):
+            m = re.match(r'^(?P<day>[0-9]{1,2})/(?P<month>[0-9]{1,2})/(?P<year>[0-9]{4})$', value)
+            if m:
+                return '%s-%s-%s' % (
+                    m.group('year'), m.group('month'), m.group('day'))
+
+            m = re.match(r'^(?P<year>[0-9]{4})$', value)
+            if m:
+                return '%s-01-01' % value
 
         if 'int_value' in action:
             value = int(value.replace(',', '.'))
         elif 'float_value' in action:
             value = float(value.replace(',', '.'))
 
+        def get_or_create(model, kwargs):
+            print kwargs
+
+            try:
+                return model.objects.get(**kwargs)
+            except model.DoesNotExist:
+                pass
+
+            instance = model(**kwargs)
+            instance.save()
+            return instance
+
+        def save_once(model):
+            """
+            The deal with this method is that we try to save the later
+            possible, hoping that the required fields have value before m2m
+            relation fields are processed.
+
+            We use _saved because we cannot rely on the id which might be set.
+            """
+            if not getattr(model, '_saved', False):
+                model.save()
+                model._saved = True
+
+        def reverse_fk_get_or_create(model, attribute, kwargs):
+            save_once(model)
+            try:
+                return getattr(model, attribute).get(**kwargs)
+            except getattr(model, attribute).model.DoesNotExist:
+                pass
+            
+            instance = getattr(model, attribute).create(**kwargs)
+            instance.save()
+            return instance
+
         print action, value
 
         if '.' in action:
             parts = action.split('.')
+
             try:
                 field = model._meta.get_field(parts[0])
-                try:
-                    relation = field.rel.to.objects.get(**{parts[1]: value})
-                except field.rel.to.DoesNotExist:
-                    relation = field.rel.to(**{parts[1]: value})
-                    relation.save()
-                #relation, c = field.rel.to.objects.get_or_create(**{parts[1]:value})
+
+            except models.FieldDoesNotExist:
+                if parts[1] not in kind_choices:
+                    raise Exception(
+                        'Field %s does not exist, or second part not in kind_choices (%s)' % (
+                        action, kind_choices))
+                else:
+                    customvalue = reverse_fk_get_or_create(model, 'customvalue_set', 
+                        {'name': parts[0]})
+                    setattr(customvalue, parts[1], value)
+                    customvalue.save()
+
+            else:
+                if isinstance(field, models.DateField):
+                    value = get_date_value(value)
+
+                if field.rel:
+                    if value == u'Poin\xe7ons sur le fond et striche sur le fond et dans le couvercle.':
+                        import ipdb; ipdb.set_trace()
+                    relation = get_or_create(field.rel.to, {parts[1]: value})
+
                 if isinstance(field, models.ForeignKey):
                     setattr(model, parts[0], relation)
                 elif isinstance(field, models.ManyToManyField):
                     # instance needs to have a primary key value before a
                     # many-to-many relationship can be used
-                    if not model._saved:
-                        model.save()
-                        model._saved = True
+                    save_once(model)
                     getattr(model, parts[0]).add(relation)
-            except models.FieldDoesNotExist:
-                if parts[1] not in kind_choices:
-                    raise
-                if not model._saved:
-                    model.save()
-                    model._saved = True
-                try:
-                    v = model.customvalue_set.get(name=parts[0])
-                except CustomValue.DoesNotExist:
-                    v = model.customvalue_set.create(name=parts[0])
-                #v, c = model.customvalue_set.get_or_create(name=parts[0])
-                setattr(v, parts[1], value)
-                v.save()
+                else:
+                    raise NotImplementedError(
+                        'Only FK and M2M are supported, or maybe the field %s is not a relation ?' % action)
+
         else:
+            field = model._meta.get_field(action)
+            if isinstance(field, models.DateField):
+                value = get_date_value(value)
+            elif isinstance(field, models.CharField):
+                if field.max_length < len(value):
+                    raise Exception('Column to small:' + field.name)
+
             setattr(model, action, value)
 
     def configuration_form(self, request):
