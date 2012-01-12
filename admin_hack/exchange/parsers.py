@@ -21,8 +21,7 @@ class CsvParser(object):
         model_class = upload.template.contenttype.model_class()
         
         f = open(upload.upload.path, 'rb')
-        print 'delim', self.field_delimiter
-        reader = csv.reader(f, delimiter=self.field_delimiter)
+        reader = csv.reader(f, delimiter=str(self.field_delimiter))
 
         row_count = 0
         for row in reader:
@@ -118,7 +117,7 @@ class CsvParser(object):
             self.field_delimiter = "\t"
 
         reader = unicode_csv_reader(request.POST['upload_sample'].split("\n"),
-            skipinitialspace=True, delimiter=self.field_delimiter)
+            skipinitialspace=True, delimiter=str(self.field_delimiter))
         rows = [row for row in reader]
 
         if '_parser_action' in request.POST.keys():
