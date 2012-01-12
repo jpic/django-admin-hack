@@ -41,6 +41,8 @@ class CsvParser(object):
             i = 0
             for action in self.actions:
                 value = row[i]
+                if isinstance(value, str):
+                    value = unicode(value, 'utf-8').strip()
                 self.execute(model, action, value)
                 i += 1
 
