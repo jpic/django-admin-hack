@@ -54,13 +54,23 @@ class TemplateAdmin(admin.ModelAdmin):
     
     def change_view(self, request, object_id, extra_context=None):
         obj = Template.objects.get(pk=object_id)
-        field_names = [f.name for f in obj.contenttype.model_class()._meta.fields]
-        for rel in obj.contenttype.model_class()._meta.fields:
-            if getattr(rel, 'rel', None):
-                for f in rel.rel.to._meta.fields:
-                    if f.name in ('lft', 'parent', 'rght', 'tree_id'):
+        field_names = []
+        fields = [x for x in obj.contenttype.model_class()._meta.fields]
+        fields += [x for x in obj.contenttype.model_class()._meta.many_to_many]
+
+        for field in fields:
+            if not getattr(field, 'rel', None):
+                field_names.append(field.name)
+            else:
+                for rel_field in field.rel.to._meta.fields:
+                    if rel_field.name in ('lft', 'parent', 'rght', 'tree_id', 'level'):
                         continue
-                    field_names.append('%s.%s' % (rel.name, f.name))
+                    if getattr(rel_field, 'rel', False):
+                        continue
+                    field_names.append('%s.%s' % (field.name, rel_field.name))
+
+        # for debugging purposes:
+        field_names.sort()
         extra_context = {
             'field_names': field_names,
             'field_names_json': simplejson.dumps(field_names),
