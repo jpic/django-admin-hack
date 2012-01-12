@@ -27,7 +27,7 @@
             });
             return data;
         }
-        function post_data() {
+        function post_data(form) {
             $.post(
                 '{% url 'yourlabs_exchange_parser_form' %}',
                 get_data(),
@@ -36,14 +36,21 @@
                     $('input[name=_parser_action][type=text]').autocomplete({
                         'source': {{ field_names_json|safe }},
                     });
+                    if (form != undefined) {
+                        form.attr('data_posted', 'yes');
+                        form.submit();
+                    }
                 },
                 'html'
             );
         }
 
         post_data();
-        $('form').submit(function() {
-            post_data();
+        $('form').submit(function(e) {
+            if (!$(this).attr('data_posted')) {
+                e.preventDefault()
+                post_data($(this));
+            }
         });
         {% endif %}
 
