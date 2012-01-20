@@ -37,240 +37,413 @@ function get_field_container(name) {
     return $('.form-row.' + name);
 }
 
+function get_fieldset_h2(fieldset) {
+    var children = fieldset.children();
+
+    if (children.length) {
+        var child = children[0];
+        if ($(child).is('h2')) {
+            return $(child);
+        }
+    }
+}
+
+function get_fieldset_name(fieldset) {
+    var fieldset_name = '';
+    var fieldset_h2 = get_fieldset_h2(fieldset);
+    return fieldset_h2 ? $.trim(fieldset_h2.html().match(fieldset_re)) : '';
+}
+
 var fieldset_re = /[^(]+/;
 function get_field_fieldset(e) {
     if (!e.is('.form-row')) {
         e = e.parents('.form-row');
     }
+
     var fieldset = e.parents('fieldset');
-    var h2 = fieldset.find('h2');
-    if (h2.length) {
-        fieldset = $.trim(h2.html().match(fieldset_re));
-    } else {
-        fieldset = ''
-    }
-    return fieldset;
+     
+    return get_fieldset_name(fieldset);
 }
 
-$(document).ready(function() {
-    // make jQuery compatible with django
-    $.ajaxSettings.traditional = true;
- 
-    function save_forms(forms) {
-        $.post(
-            '{% url 'admin_hack_forms_update' %}', {
-                'forms': $.toJSON(forms),
+function save(callback) {
+    $.post(
+        '{% url 'admin_hack_forms_update' %}', {
+            'forms': $.toJSON(forms),
+        }, function(data, textStatus, jqXHR) {
+            forms = data;
+
+            for (var i = 0; i < data.length; i++) {
+                if (!$select.find('option[value='+data[i].pk+']').length) {
+                    $select.append('<option value="'+data[i].pk+'">'+data[i].name+'</option>');
+                }
+
+                if (data[i].name == currentForm.name) {
+                    currentForm = data[i];
+                    $select.val(data[i].pk);
+                    $select.trigger('change');
+                    break;
+                }
             }
-        );
+
+            if (callback) {
+                callback();
+            }
+        }, 'json'
+    );
+}
+
+function deleteForm() {
+    if (currentForm.name == 'full') {
+        alert("{% trans "You may not remove the 'full' form. It serves as reference." %}");
+        return;
     }
 
-    /* {{{ UserProfile */
-    UserProfile = function(data) {
-        this.data = data;
+    var confirmed = confirm('{% trans "Are you sure you want to this form model" %} "' + currentForm.name + '" ? {% trans "There is no going back once you push the confirmation button" %}');
 
-        up = this;
-        $(document).bind('admin_hack.ChangeView.changeSelectForm', 
-            function(e, select, form) {
-                up.selectForm(select, form);
-                up.save();
+    if (confirmed) {
+        $select.find('option[value='+currentForm.pk+']').remove();
+        var full;
+        for(var i=0; i < forms.length; i++) {
+            if (forms[i].name == 'full') {
+                full = forms[i];
             }
-        );
+
+            if (forms[i].pk == currentForm.pk) {
+                forms.splice(i, 1);
+            }
+        }
+
+        save();
+        currentForm = full;
+        $select.val(full.pk);
+        $select.trigger('change');
     }
-    UserProfile.prototype = {
-        selectForm: function(select, form) {
-            var remove = []
+}
 
-            for(var i=this.data.forms.length-1; i>=0; i--)
-                if (form.contenttype.pk == this.data.forms[i].contenttype.pk)
-                    this.data.forms.splice(i, 1);
-            
-            this.data.forms.push(form);
-        },
-        save: function() {
-            var data = {
-                forms: [],
-                user: this.data.pk,
-            };
+function createForm(name) {
+    // prompt for a name if necessarry
+    if (!name) name = prompt('{% trans "How should we name the new form ?" %}');
+    // abort if no name for the form
+    if (!name) return
 
-            for (var i in this.data.forms)
-                data.forms.push(this.data.forms[i].pk)
-
-            $.post(
-                '{% url 'admin_hack_user_profile_update' request.user.pk %}',
-                data
-            );
+    // select the full form to be used as template for the new form
+    if (name != 'full' && currentForm.name != 'full') {
+        for (var i=0; i<=forms.length; i++) {
+            if (forms[i].name == 'full') {
+                currentForm = forms[i];
+                updateUi();
+                break;
+            }
         }
     }
-    /* }}} */
 
-
-    /* {{{ ModeManager */
-    ModeManager = {
-        modes: [],
-        mode: false,
-        setMode: function(name) {
-            if (this.mode) {
-                this.mode.disable();
-            }
-
-            if (name) {
-                this.mode = this.modes[name];
-                this.mode.enable();
-            } else {
-                this.mode = false;
-            }
+    // create a new form array
+    currentForm = {
+        name: name,
+        contenttype: {
+            pk: {{ contenttype.pk }},
         },
-        install: function(cv) {
-            this.cv = cv;
+        field_set: getFieldSet(),
+    };
 
-            $(document).bind('admin_hack.ChangeView.changeSelectForm', 
-                function(e, select, form) {
-                    /* No modes for 'full' form */
-                    if (cv.form.name == 'full') {
-                        $('.hide_on_full').slideUp();
-                    } else {
-                        $('.hide_on_full').slideDown();
-                    }
+    // register the new form
+    forms.push(currentForm)
+    // upload changes
+    save()
+}
 
-                    /* Disable current mode on form change */
-                    if (ModeManager.mode) {
-                        ModeManager.mode.disable(this.cv);
-                    }
-                }
-            );
-        },
-        installMode: function(mode) {
-            this.modes[mode.name] = mode;
-            mode.install(this.cv.container, this.cv)
+function getFieldSet() {
+    var new_field_set = [];
+    var order = 0;
+    var cv = this;
 
-            $('#admin_hack_mode_' + mode.name).click(function() {
-                if ($(this).hasClass('enabled')) {
-                    ModeManager.setMode()
-                } else {
-                    ModeManager.setMode(mode.name)
+    var names = [];
+    $('fieldset .form-row').each(function() {
+        if ($(this).hasClass('admin_hack_hidden')) {
+            return
+        }
+
+        var name = get_field_name($(this));
+        if (name == 'admin_hack_form') {
+            return
+        }
+
+        var fieldset = get_field_fieldset($(this));
+
+        new_field_set.push({
+            name: name,
+            order: order,
+            fieldset: fieldset,
+        })
+        names.push(name);
+
+        order = order +1;
+    });
+
+    // console.log('fields', names);
+
+    return new_field_set
+}
+function updateUi() {
+    // hide stuff that should not be there when full is selected
+    currentForm.name == 'full' ? $('.hide_on_full').slideUp() : $('.hide_on_full').slideDown();
+
+    /* let's re-order some fields yay */
+    var previous, e;
+    for(var i=0; i < currentForm.field_set.length; i++) {
+        var field = currentForm.field_set[i];
+
+        e = get_field_container(field.name);
+
+        var fieldset;
+        if (field.fieldset) {
+            $('fieldset').each(function() {
+                var name = get_fieldset_name($(this));
+                if (name == field.fieldset) {
+                    fieldset = $(this);
                 }
             });
         }
-    }
-    /* }}} */
 
-       /* {{{ HideMode */
-    HideMode = function(name) {
-        this.name = name;
-        ModeManager.modes[name] = this;
+        if (i > 0 && fieldset && field.fieldset != currentForm.field_set[i-1].fieldset) {
+            $(e).insertAfter(get_fieldset_h2(fieldset));
+        } else if (previous) {
+            $(e).insertAfter(previous);
+        } else {
+            $(e).insertAfter('.form-row.admin_hack_form');
+        }
+
+        previous = e;
     }
-    HideMode.prototype = {
-        enable: function() {
+
+    /* let's hide un-necessary fields */
+    $('.form-row').each(function() {
+        var name = get_field_name($(this));
+        if (name == 'admin_hack_form') return
+
+        var found = false;
+        for (i=0; i < currentForm.field_set.length; i++) {
+            if (name == currentForm.field_set[i].name) {
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            $(this).removeClass('admin_hack_hidden');
+        } else {
+            $(this).addClass('admin_hack_hidden');
+        }
+    });
+
+    $('fieldset.module').each(function() {
+        // pass on inlines for the moment
+        if ($(this).parent().hasClass('inline-related')) {
+            return;
+        }
+
+        // if all rows are hidden then hide the module 
+        // console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible'));
+        if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
+            $(this).addClass('admin_hack_hidden');
+            $(this).find('h2').addClass('admin_hack_hidden');
+        } else {
+            $(this).removeClass('admin_hack_hidden');
+            $(this).find('h2').removeClass('admin_hack_hidden');
+        }
+    });
+
+    // hide show mode if no field is hidden
+    $('.admin_hack_hidden').length == 0 ? $('#admin_hack_mode_show').parent().hide() : $('#admin_hack_mode_show').parent().show();
+}
+
+function main() {
+    // clean options
+    $select.find('option').each(function() {
+        if ($.inArray(parseInt($(this).attr('value')), {{ forms_pk_json }}) == -1) {
+            $(this).remove();
+        }
+        if (!$(this).attr('value').length) {
+            $(this).remove();
+        }
+    });
+
+    // create the full form if it doesn't exist
+    if ($select.find('option').length == 0) {
+        form = createForm('full');
+        $select.find('option').attr('selected', 'selected');
+    }
+
+    // bind change to update the ui
+    $select.change(function() {
+        // find the form
+        for (var i=0; i<forms.length; i++) {
+            if (forms[i].pk == $(this).val()) {
+                currentForm = forms[i];
+                // update the ui
+                updateUi();
+                break;
+            }
+        }
+    });
+
+    // ensure an option is selected
+    if (!$select.find('option:selected')) {
+        $select.find('option:first').attr('selected', 'selected');
+    }
+    // trigger a change to update ui
+    $select.trigger('change');
+
+    // bind create button to createForm
+    $('#admin_hack_create').click(function() {
+        createForm()
+    });
+    
+    // bind delete button to deleteForm
+    $('#admin_hack_delete').click(function() {
+        deleteForm()
+    });
+ 
+    // bind hide button to add .admin_hack_hidden to parent form row and remove
+    // itself on click
+    $('.admin_hack_mode_hide').live('click', function() {
+        $(this).parents('.form-row').addClass('admin_hack_hidden');
+        $(this).remove();
+    });
+    // bind the hide mode toggler button
+    $('#admin_hack_mode_hide').click(function() {
+        if ($(this).data('saving')) return
+
+        if ($(this).hasClass('enabled')) {
+            // remove hide buttons - not needed anymore
+            $('.admin_hack_mode_hide').remove();
+
+            // parse current form fieldset
+            currentForm.field_set = getFieldSet();
+
+            $(this).html('{% trans "Saving your changes ..." %}'
+                ).data('saving', 1);
+            
+            // upload changes
+            save(function() {
+                // set mode as disabled and update label
+                $('#admin_hack_mode_hide').removeClass('enabled').html(
+                    "{% trans 'Remove fields' %}").data('saving', 0);
+                
+                // show other modes
+                $('.admin_hack_mode:not(:visible)').slideDown();
+            });
+        } else {
+            // create the hide button html
             var button = admin_hack_html_tag_factory('span', {
-                'class': 'btn danger admin_hack_mode_' + this.name,
+                'class': 'btn danger admin_hack_mode_hide',
                 'title': "{% trans 'Hide this field' %}",
             }, "{% trans 'Remove' %}");
 
-            $('label').each(function() {
-                if ($(this).hasClass('required')) {
-                    return
-                }
-                $(this).append(button);
+            // add the hide button to all fields *except* required and admin_hack_form
+            $('#content-main label').each(function() {
+                if ($(this).hasClass('required')) return
+                if (get_field_name($(this)) == 'admin_hack_form') return
+
+                // append the button once per form row
+                if (! $(this).parents('.form-row').find('.admin_hack_mode_hide').length) 
+                    $(this).append(button);
             });
 
-            $('#admin_hack_mode_' + this.name).addClass('success');
-            $('#admin_hack_mode_' + this.name).addClass('enabled');
-            $('#admin_hack_mode_' + this.name).html(
+            // set mode enabled and label
+            $(this).addClass('enabled').html(
                 "{% trans 'Save your changes' %}");
-            this.enabled = true;
-        },
-        disable: function() {
-            $('.admin_hack_mode_' + this.name).remove();
-            $('#admin_hack_mode_' + this.name).removeClass('success');
-            $('#admin_hack_mode_' + this.name).removeClass('enabled');
-            $('#admin_hack_mode_' + this.name).html("{% trans 'Remove fields' %}");
-            this.enabled = false;
-            $(document).trigger('admin_hack.ChangeView.save');
-        },
-        install: function(container, cv) {
-            container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Remove a field from the selected form model with the remove field mode' %}",
-                'id': 'admin_hack_mode_' + this.name,
-            }, "{% trans 'Remove fields' %}"));
-
-            $('.admin_hack_mode_' + this.name).live('click', function() {
-                var name = get_field_name($(this));
-                
-                for ( var i in cv.form.field_set ) {
-                    if (name == cv.form.field_set[i].name) {
-                        cv.form.field_set.splice(i, 1);
-                        cv.updateForm(cv.select, cv.form);
-                        break;
-                    }
-                }
-            });
+            
+            // hide other modes
+            $('.admin_hack_mode:not(.enabled)').slideUp();
         }
-    }
-    /* }}} */
-    /* {{{ ShowMode */
-    ShowMode = function(name) {
-        this.name = name;
-        ModeManager.modes[name] = this;
-    }
-    ShowMode.prototype = {
-        enable: function() {
-            var button = admin_hack_html_tag_factory('span', {
-                'class': 'btn success admin_hack_mode_' + this.name,
-                'title': "{% trans 'Show this field in the current form configuration' %}",
-            }, "{% trans 'Keep' %}");
+    });
 
-            var mode = this;
-            $('.admin_hack_hidden').each(function() {
-                $(this).removeClass('admin_hack_hidden');
-                if (! $(this).find('label').find('.admin_hack_mode_' + mode.name).length) 
-                    $(this).find('label').append(button);
-            });
+    // bind show button to add .admin_hack_hidden to parent form row and remove
+    // itself on click
+    $('.admin_hack_mode_show').live('click', function() {
+        $(this).remove();
+    });
+    // bind the show mode toggler button
+    $('#admin_hack_mode_show').click(function() {
+        if ($(this).data('saving')) return
 
-            $('#admin_hack_mode_' + this.name).addClass('success');
-            $('#admin_hack_mode_' + this.name).addClass('enabled');
-            $('#admin_hack_mode_' + this.name).html(
-                "{% trans 'Save your changes' %}");
-            this.enabled = true;
-        },
-        disable: function() {
-            $('.admin_hack_mode_' + this.name).remove();
-            $('#admin_hack_mode_' + this.name).removeClass('success');
-            $('#admin_hack_mode_' + this.name).removeClass('enabled');
-            $('#admin_hack_mode_' + this.name).html("{% trans 'Add fields' %}");
-            this.enabled = false;
-            $(document).trigger('admin_hack.ChangeView.updateForm');
-            $(document).trigger('admin_hack.ChangeView.save');
-        },
-        install: function(container, cv) {
-            container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Show all fields available for your form model allowing you to click-choose which fields you want to add' %}",
-                'id': 'admin_hack_mode_' + this.name,
-            }, "{% trans 'Add fields' %}"));
-
-            $('.admin_hack_mode_' + this.name).live('click', function() {
-                var name = get_field_name($(this));
-                cv.form.field_set.push({
-                    'name':name,
-                })
-                $(document).trigger('admin_hack.ShowMode.addField');
+        if ($(this).hasClass('enabled')) {
+            // add hidden class to all leftover buttons form-row and remove buttons
+            $('.admin_hack_mode_show').each(function() {
+                $(this).parents('.form-row').addClass('admin_hack_hidden');
                 $(this).remove();
             });
+
+            // parse current form fieldset
+            currentForm.field_set = getFieldSet();
+
+            $(this).html('{% trans "Saving your changes ..." %}'
+                ).data('saving', 1);
+
+            // upload changes
+            save(function() {
+                // set mode as disabled and update label
+                $('#admin_hack_mode_show').removeClass('enabled').html(
+                    "{% trans 'Un-remove fields' %}").data('saving', 0);
+                
+                // show other modes
+                $('.admin_hack_mode:not(:visible)').slideDown();
+            });
+        } else {
+            // create the show button html
+            var button = admin_hack_html_tag_factory('span', {
+                'class': 'btn success admin_hack_mode_show',
+                'title': "{% trans 'Keep this field visible in current form configuration' %}",
+            }, "{% trans 'Keep' %}");
+
+            // add the show button to all fields *except* required and admin_hack_form
+            $('.admin_hack_hidden').each(function() {
+                // remove the hidden class
+                $(this).removeClass('admin_hack_hidden');
+
+                // append the button once per form row
+                if (! $(this).find('.admin_hack_mode_show').length) 
+                    $(this).find('label:first').append(button);
+            });
+
+            // set mode enabled and label
+            $(this).addClass('enabled').html(
+                "{% trans 'Save your changes' %}");
+            
+            // hide other modes
+            $('.admin_hack_mode:not(.enabled)').slideUp();
         }
-    }
-    /* }}} */
-    /* {{{ OrderMode */
-    OrderMode = function(name) {
-        this.name = name;
-        ModeManager.modes[name] = this;
-    }
-    OrderMode.prototype = {
-        enable: function() {
+    });
+
+    // bind the order mode toggler button
+    $('#admin_hack_mode_move').click(function() {
+        if ($(this).data('saving')) return
+
+        if ($(this).hasClass('enabled')) {
+            // destroy sortable
+            $('fieldset').sortable('destroy');
+
+            // parse current form fieldset
+            currentForm.field_set = getFieldSet();
+            
+            $(this).html('{% trans "Saving your changes ..." %}'
+                ).data('saving', 1);
+            
+            // upload changes
+            save(function() {
+                // set mode as disabled and update label
+                $(this).removeClass('enabled').html(
+                    "{% trans 'Move fields' %}").data('saving', 0);
+                
+                // show other modes
+                $('.admin_hack_mode:not(:visible)').slideDown();
+            });            
+        } else {
+            // open fieldsets
             $('fieldset.collapsed .collapse-toggle').click();
 
+            // make sortable
             $('fieldset:not(.inline-related fieldset)').sortable({
                 connectWith: 'fieldset',
                 forcePlaceholderSize: true,
@@ -278,274 +451,29 @@ $(document).ready(function() {
                 items: '.form-row',
             });
 
-            $('#admin_hack_mode_' + this.name).addClass('success');
-            $('#admin_hack_mode_' + this.name).addClass('enabled');
-            $('#admin_hack_mode_' + this.name).html(
+            // set mode enabled and label
+            $(this).addClass('enabled').html(
                 "{% trans 'Save your changes' %}");
-            this.enabled = true;
-        },
-        disable: function() {
-            $('fieldset').sortable('destroy');
-            $('.admin_hack_mode_' + this.name).remove();
-            $('#admin_hack_mode_' + this.name).removeClass('success');
-            $('#admin_hack_mode_' + this.name).removeClass('enabled');
-            $('#admin_hack_mode_' + this.name).html("{% trans 'Reorder fields' %}");
-            this.enabled = false;
-            $(document).trigger('admin_hack.OrderMode.updateOrder');
-            $(document).trigger('admin_hack.ChangeView.save');
-        },
-        install: function(container, cv) {
-            container.append(admin_hack_html_tag_factory('span', {
-                'class': 'btn hide_on_full',
-                'style': 'display:none',
-                'title': "{% trans 'Reorder the fields by drag\'n\'drop' %}",
-                'id': 'admin_hack_mode_' + this.name,
-            }, "{% trans 'Reorder fields' %}"));
-
-
-            $(document).bind('admin_hack.ShowMode.addField', this.updateOrder);
-            $(document).bind('admin_hack.OrderMode.updateOrder', this.updateOrder);
-        },
-        updateOrder: function() {
-            var new_field_set = [];
-            var order = 0;
-            $('fieldset .form-row').each(function() {
-                if ($(this).hasClass('admin_hack_hidden')) {
-                    return
-                }
-
-                var name = get_field_name($(this));
-                var fieldset = get_field_fieldset($(this));
-
-                for ( var i in cv.form.field_set ) {
-                    if (name == cv.form.field_set[i].name) {
-                        cv.form.field_set[i].order = order;
-                        cv.form.field_set[i].fieldset = fieldset;
-                        order = order + 1;
-                        new_field_set.push(cv.form.field_set[i]);
-                        break;
-                    }
-                }
-            });
-
-            cv.form.field_set = new_field_set
+            
+            // hide other modes
+            $('.admin_hack_mode:not(.enabled)').slideUp();
         }
-    }
-    /* }}} */
+    });
+}
 
-    /* {{{ ChangeView */
-    ChangeView = function(forms) {
-        this.forms = forms;
-        var cv = this;
+var $select, currentForm, forms;
+$(document).ready(function() {
+    // make jQuery compatible with django
+    $.ajaxSettings.traditional = true;
+ 
+    $('div.tabular.inline-related table').each(function() {
+        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
+            $(this).find('thead').hide();
+        }
+    });
 
-        $(document).bind('admin_hack.ChangeView.changeSelectForm', 
-            function(e, select, form) {
-                cv.form = form;
-                cv.updateForm(select, form);
-            }
-        );
-    }
+    $select = $('select#id_admin_hack_form');
+    forms = {{ forms_dict|as_json }};
 
-    ChangeView.prototype = {
-        install: function(main) {
-            if (!$('#admin_hack').length) {
-                main.find('.object_tool').before('<div id="admin_hack"></div>');
-            }
-            this.container = $('#admin_hack');
-            this.container.append('<p>{% trans 'Select your form model:' %}</p>');
-            this.container.append(change_view.renderSelect());
-            this.select = this.container.find('select');
-
-            cv = this;
-            this.select.change(function() {
-                for ( var i in cv.forms ) {
-                    if ( cv.forms[i].pk == $(this).val() ) {
-                        $(document).trigger(
-                            'admin_hack.ChangeView.changeSelectForm', 
-                            [$(this), cv.forms[i]]
-                        );
-                        break;
-                    }
-                }
-            });
-
-            $(document).bind('admin_hack.ChangeView.updateForm', function() {
-                cv.updateForm(cv.select, cv.form);
-            });
-            $(document).bind('admin_hack.ChangeView.save', function() {
-                save_forms(cv.forms);
-            });
-        },
-        updateForm: function(select, form) {
-            cv = this;
-
-            /* let's re-order some fields yay */
-            var previous, e;
-            for(var i=0; i < form.field_set.length; i++) {
-                e = get_field_container(form.field_set[i].name);
-
-                var fieldset;
-                if (form.field_set[i].fieldset) {
-                    $('fieldset h2').each(function() {
-                        if($(this).html().match(form.field_set[i].fieldset)) {
-                            fieldset = $(this);
-                        }
-                    });
-                }
-
-                if (fieldset && form.field_set[i].fieldset != form.field_set[i-1].fieldset) {
-                    fieldset.after(e);
-                } else if (previous) {
-                    e.insertAfter(previous);
-                } else {
-                    $('fieldset:first').prepend(e);
-                }
-
-                previous = e;
-            }
-
-            /* let's hide un-necessary fields */
-            $('.form-row').each(function() {
-                var name = get_field_name($(this));
-                var found = false;
-
-                for (i=0; i < form.field_set.length; i++) {
-                    if (name == form.field_set[i].name) {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found) {
-                    $(this).removeClass('admin_hack_hidden');
-                } else {
-                    $(this).addClass('admin_hack_hidden');
-                }
-            });
-
-            /* old code
-            $('.form-row').each(function() {
-                if ($(this).find('.field-box').length > 0) {
-                    return;
-                }
-
-                var hide = true;
-                for ( var i in form.field_set ) {
-                    var name = form.field_set[i].name;
-                    if ( $(this).hasClass(name) ) {
-                        hide = false;
-                    }
-                }
-
-                if (hide) {
-                    $(this).addClass('admin_hack_hidden');
-                } else {
-                    $(this).removeClass('admin_hack_hidden');
-                }
-            });
-
-            $('.field-box').each(function() {
-                var hide = true;
-
-                for ( var i in form.field_set ) {
-                    var name = form.field_set[i].name;
-                    if ( $(this).find('[name='+name+']').length ) {
-                        hide = false;
-                    }
-                }
-
-                if (hide) {
-                    $(this).addClass('admin_hack_hidden');
-                } else {
-                    $(this).removeClass('admin_hack_hidden');
-                }
-            });
-
-            $('.form-row').each(function() {
-                if ($(this).find('.field-box').length == 0) {
-                    return;
-                }
-                
-                var all_hidden = true;
-
-                $(this).find('.field-box').each(function() {
-                    if (! $(this).hasClass('admin_hack_hidden')) {
-                        all_hidden = false;
-                    }
-                });
-
-                if (all_hidden) {
-                    $(this).addClass('admin_hack_hidden');
-                } else {
-                    $(this).removeClass('admin_hack_hidden');
-                }
-            });
-            */
-
-            $('fieldset.module').each(function() {
-                /* pass on inlines for the moment */
-                if ($(this).parent().hasClass('inline-related')) {
-                    return;
-                }
-
-                /* if all rows are hidden then hide the module */
-                /* console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible')); */
-                if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
-                    $(this).addClass('admin_hack_hidden');
-                    $(this).find('h2').addClass('admin_hack_hidden');
-                } else {
-                    $(this).removeClass('admin_hack_hidden');
-                    $(this).find('h2').removeClass('admin_hack_hidden');
-                }
-            });
-
-        },
-        renderSelect: function() {
-            if (!this.forms.length) {
-                return '';
-            }
-
-            var html = [
-                '<select id="_preset_change" style="display:inline; vertical-align: top;">',
-            ];
-            for (var i in this.forms) {
-                html.push('<option value="' + this.forms[i].pk + '">');
-                html.push(this.forms[i].name);
-                html.push('</option>');
-            }
-
-            return html.join('');
-        },
-    }
-    /* }}} */
-
-    var user_profile = new UserProfile({{ request.user.adminhackuserprofile.to_dict|as_json }});
-
-    {% if change_view %}
-        var change_view = new ChangeView({{ forms_dict|as_json }});
-        var main = $('#content-main')
-        change_view.install(main, user_profile);
-
-        ModeManager.install(change_view)
-        
-        var hide_mode = new HideMode('hide');
-        ModeManager.installMode(hide_mode, change_view);
-
-        var show_mode = new ShowMode('show');
-        ModeManager.installMode(show_mode, change_view);
-        
-        var order_mode = new OrderMode('order');
-        ModeManager.installMode(order_mode, change_view);
-
-            {% if last_form_pk %}
-                change_view.select.val({{ last_form_pk }});
-                change_view.select.trigger('change');
-            {% endif %}
-
-        $('div.tabular.inline-related table').each(function() {
-            if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
-                $(this).find('thead').hide();
-            }
-        });
-    {% endif %}
+    main();
 });

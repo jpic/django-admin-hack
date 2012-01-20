@@ -1,3 +1,4 @@
+from django.db import transaction
 import re
 
 from django.conf import settings
@@ -16,15 +17,32 @@ LIST_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/$'
 class AdminHackFormsUpdateView(generic.View):
     def post(self, request, *args, **kwargs):
         data = simplejson.loads(request.POST['forms'])
+
         for form_dict in data:
             if 'pk' in form_dict.keys():
                 form = Form.objects.get(pk=form_dict['pk'])
             else:
-                continue
-            
+                contenttype = ContentType.objects.get(pk=form_dict['contenttype']['pk'])
+                try:
+                    form = Form.objects.get(name=form_dict['name'], contenttype=contenttype)
+                except Form.DoesNotExist:
+                    form = Form(name=form_dict['name'], contenttype=contenttype)
+                    form.save()
+
             form.from_dict(form_dict)
             form.save()
-        return http.HttpResponse('OK', status=201)
+
+
+        contenttype = ContentType.objects.get(pk=form_dict['contenttype']['pk'])
+
+        names = [f['name'] for f in data]
+        Form.objects.filter(contenttype=contenttype).exclude(name__in=names).delete()
+
+        forms = Form.objects.filter(contenttype=contenttype).select_related('field')
+        response = http.HttpResponse(simplejson.dumps([f.to_dict() for f in forms]), 
+            status=201)
+        
+        return response
 
 class AdminHackUserProfileUpdateView(generic.UpdateView):
     form_class = AdminHackUserProfileForm
@@ -71,10 +89,13 @@ class JsHackView(generic.TemplateView):
             c['change_view'] = True
             model = get_model(m.group('app'), m.group('model'))
             ctype = ContentType.objects.get_for_model(model)
+            c['contenttype'] = ctype
             forms = c['forms'] = Form.objects.filter(
                 contenttype=ctype).select_related()
                         
             forms_dict = c['forms_dict'] = [f.to_dict() for f in forms]
+            forms_pks = c['forms_pk'] = [f.pk for f in forms]
+            c['forms_pk_json'] = simplejson.dumps(forms_pks)
 
             user_forms = self.request.user.adminhackuserprofile.forms
             try:

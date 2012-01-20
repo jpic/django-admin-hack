@@ -130,20 +130,10 @@ class Form(models.Model):
         self.name = data['name']
         self.contenttype_id = data['contenttype']['pk']
 
-        names = []
+        self.field_set.all().delete()
         for field_dict in data['field_set']:
-            if 'pk' in field_dict.keys():
-                field = Field.objects.get(pk=field_dict['pk'])
-                field.name = field_dict['name']
-                field.order = field_dict['order']
-                field.fieldset = field_dict['fieldset']
-                field.save()
-            else:
-                field = self.field_set.create(name=field_dict['name'], 
-                    order=field_dict['order'], fieldset=field_dict['fieldset'])
-            names.append(field_dict['name'])
-        
-        self.field_set.exclude(name__in=names).delete()
+            field = self.field_set.create(name=field_dict['name'], 
+                order=field_dict['order'], fieldset=field_dict['fieldset'])
 
 class Field(models.Model):
     form = models.ForeignKey('Form')

@@ -1,2 +1,37 @@
+{% load i18n %}
 <div id="admin_hack">
+	<a href="#" id="toggle_links">toggle setting</a>
+	<div class="admin_hack_toggle">
+		<ul>
+			<li class="hide_on_full">
+				<span class="toggle_remove_btn admin_hack_mode" title="{% trans 'Remove fields from the selected form model' %}" id="admin_hack_mode_hide">
+        			{% trans 'Remove fields' %}
+    			</span>
+			</li>
+			<li class="hide_on_full">
+				<span class="toggle_add_btn admin_hack_mode" title="{% trans 'Add fields to the selected form model' %}" id="admin_hack_mode_show">
+        			{% trans 'Un-remove fields' %}
+    			</span>
+			</li>
+			<li class="hide_on_full">
+				<span class="toggle_move_btn admin_hack_mode" title="{% trans 'Reorder fields in the selected form model' %}" id="admin_hack_mode_move">
+        			{% trans 'Move fields' %}
+    			</span>
+			</li>
+			<li>
+				<span title="{% trans 'Create a new form model' %}" id="admin_hack_create">
+        			{% trans 'New form' %}
+    			</span>
+			</li>
+			<li class="hide_on_full">
+				<span title="{% trans 'Delete the currently selected form model' %}" id="admin_hack_delete">
+        			{% trans 'Delete form' %}
+    			</span>
+			</li>
+		</ul>
+		<ul class="help_links_toggle">
+			<li><a href="#">Settings</a></li>
+			<li><a href="#">Help</a></li>
+		</ul>
+	</div>  
 </div>

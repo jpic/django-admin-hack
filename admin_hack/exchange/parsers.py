@@ -135,8 +135,6 @@ class CsvParser(object):
                     value = get_date_value(value)
 
                 if field.rel:
-                    if value == u'Poin\xe7ons sur le fond et striche sur le fond et dans le couvercle.':
-                        import ipdb; ipdb.set_trace()
                     relation = get_or_create(field.rel.to, {parts[1]: value})
 
                 if isinstance(field, models.ForeignKey):
