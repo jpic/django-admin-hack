@@ -15,7 +15,7 @@ class ImageArchiveProcessor(object):
 class CsvParser(object):
     def __init__(self):
         self.actions = None
-        self.field_delimiter = ','
+        self.field_delimiter = ';'
 
     def load(self, upload, max_rows=None):
         model_class = upload.template.contenttype.model_class()
