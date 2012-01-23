@@ -12,8 +12,12 @@
 
         $('input[type=submit][name=_addanother]').remove()
         $('input[type=submit][name=_save]').remove()
+        $('#content-main form').append('<input name="_continue" type="hidden" value="1" />');
 
         {% if original.pk %}
+        $('input[name=_field_delimiter]').live('change', function() {
+            post_data();
+        });
         $('select[name=parser_class]').parent().append(
             $('select[name=parser_class] option:selected').html());
         $('select[name=parser_class]').hide()
