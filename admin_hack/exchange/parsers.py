@@ -26,6 +26,8 @@ class CsvParser(object):
         row_count = 0
         for row in reader:
             i = 0
+            if i == 0:
+                row[0] = row[0].decode('utf-8-sig')
             model = None
             for action in self.actions:
                 if action and action[0] == '$':
