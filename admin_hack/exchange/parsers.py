@@ -164,8 +164,6 @@ class CsvParser(object):
     def configuration_form(self, request):
         if '_field_delimiter' in request.POST.keys():
             self.field_delimiter = request.POST['_field_delimiter']
-        else:
-            self.field_delimiter = ';'
 
         delimiter = self.field_delimiter
         if self.field_delimiter == 'TAB':
