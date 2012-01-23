@@ -70,11 +70,14 @@ class CsvParser(object):
             m = re.match(r'^(?P<year>[0-9]{4})$', value)
             if m:
                 return '%s-01-01' % value
+            return value
 
         if 'int_value' in action:
             value = int(value.replace(',', '.'))
         elif 'float_value' in action:
             value = float(value.replace(',', '.'))
+        elif 'date_value' in action:
+            value = get_date_value(value)
 
         def get_or_create(model, kwargs):
             print kwargs
