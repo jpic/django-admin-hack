@@ -14,6 +14,7 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
+{% if change_view %}
 var strip_id_re = /^id_/;
 var is_autocomplete_re = /_text$/
 function get_field_name(e) {
@@ -121,20 +122,22 @@ function deleteForm() {
 }
 
 function createForm(name) {
+    var field_set;
+
     // prompt for a name if necessarry
     if (!name) name = prompt('{% trans "How should we name the new form ?" %}');
     // abort if no name for the form
     if (!name) return
 
     // select the full form to be used as template for the new form
-    if (name != 'full' && currentForm.name != 'full') {
-        for (var i=0; i<=forms.length; i++) {
-            if (forms[i].name == 'full') {
-                currentForm = forms[i];
-                updateUi();
-                break;
-            }
+    for (var i=0; i<forms.length; i++) {
+        if (forms[i].name == 'full') {
+            field_set = forms[i].field_set.slice();
+            break;
         }
+    }
+    if (!field_set) {
+        field_set = getFieldSet();
     }
 
     // create a new form array
@@ -143,7 +146,7 @@ function createForm(name) {
         contenttype: {
             pk: {{ contenttype.pk }},
         },
-        field_set: getFieldSet(),
+        field_set: field_set,
     };
 
     // register the new form
@@ -186,7 +189,7 @@ function getFieldSet() {
 }
 function updateUi() {
     // hide stuff that should not be there when full is selected
-    currentForm.name == 'full' ? $('.hide_on_full').slideUp() : $('.hide_on_full').slideDown();
+    currentForm.name == 'full' ? $('.hide_on_full').hide() : $('.hide_on_full').show();
 
     /* let's re-order some fields yay */
     var previous, e;
@@ -237,24 +240,31 @@ function updateUi() {
     });
 
     $('fieldset.module').each(function() {
-        // pass on inlines for the moment
-        if ($(this).parent().hasClass('inline-related')) {
-            return;
-        }
+        // pass on inline related
+        if ($(this).parent().hasClass('inline-related')) return
 
-        // if all rows are hidden then hide the module 
+        var name = get_fieldset_name($(this));
+
+        if (!name) return;
+
+        var tab;
+        $tabs.find('li a').each(function() {
+            if ($(this).html() == name) {
+                tab = $(this).parent();
+            }
+        });
+        // if all rows are hidden then hide the tab
         // console.log($(this).find('h2').html(), $(this).hasClass('collapsed'), $(this).is(':visible'));
-        if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0) {
-            $(this).addClass('admin_hack_hidden');
-            $(this).find('h2').addClass('admin_hack_hidden');
+        if ($(this).find('.form-row:not(.admin_hack_hidden)').length == 0 && !$(this).is('inline-related')) {
+            tab.addClass('admin_hack_hidden');
         } else {
-            $(this).removeClass('admin_hack_hidden');
-            $(this).find('h2').removeClass('admin_hack_hidden');
+            tab.removeClass('admin_hack_hidden');
         }
     });
 
     // hide show mode if no field is hidden
-    $('.admin_hack_hidden').length == 0 ? $('#admin_hack_mode_show').parent().hide() : $('#admin_hack_mode_show').parent().show();
+    if (currentForm.name != 'full' )
+        $('.admin_hack_hidden').length == 0 ? $('#admin_hack_mode_show').parent().hide() : $('#admin_hack_mode_show').parent().show();
 }
 
 function main() {
@@ -293,6 +303,83 @@ function main() {
     }
     // trigger a change to update ui
     $select.trigger('change');
+}
+
+var $tabs, $select, currentForm, forms;
+$(document).ready(function() {
+    // make jQuery compatible with django
+    $.ajaxSettings.traditional = true;
+ 
+    $('div.tabular.inline-related table').each(function() {
+        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
+            $(this).find('thead').hide();
+        }
+    });
+
+    // create the tab list after the first fieldset
+    $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
+    $tabs = $('#fieldset_tabs');
+
+    // are there enought fieldsets to make tabs ?
+    if ($('fieldset').length < 2) {
+        $tabs.hide();
+    } else {
+        // generate the tab list
+        $('fieldset').each(function() {
+            var name = get_fieldset_name($(this));
+            if (!name)
+                $(this).addClass('always_active');
+            else
+                $tabs.append('<li><a href="javascript:;">'+name+'</a></li>');
+        });
+
+        $tabs.find('li').click(function() {
+            // what is the fieldset name
+            var name = $(this).find('a').html();
+            
+            // what is the fieldset element
+            var fieldset;
+            $('fieldset').each(function() {
+                if (name != get_fieldset_name($(this))) return
+                fieldset = $(this);
+            });
+
+            // is the user trying to open a tab that is already open ?
+            if (fieldset.hasClass('active')) return
+
+            // deactivate the active fieldset
+            $('fieldset.active').removeClass('active');
+            $('li.active').removeClass('active');
+            // activate the related fieldset
+            fieldset.addClass('active');
+            $(this).addClass('active');
+        });
+        $tabs.find('li:first').click();
+    }
+
+    /* This should work but for some reason it doesn't
+    $('li, .switch-on-hover, .switch-on-hover a').live('mouseover', function() {
+        var li = $(this);
+        $(this).data('timeout', setTimeout(function() {
+            console.log('timeoutfunccall');
+            li.find('a').click();
+        }, 2000));
+        console.log('setTimeout', $(this).data('timeout'))
+    });
+    $('li, .switch-on-hover').live('mouseout', function() {
+        clearTimeout($(this).data('timeout'));
+        console.log('cleartimeout');
+    });
+    */
+
+    $select = $('select#id_admin_hack_form');
+
+    // bin the reset button to delete and re-create the current form
+    $('#admin_hack_reset').click(function() {
+        var name = currentForm.name;
+        deleteForm();
+        createForm(name);
+    });
 
     // bind create button to createForm
     $('#admin_hack_create').click(function() {
@@ -421,6 +508,8 @@ function main() {
         if ($(this).data('saving')) return
 
         if ($(this).hasClass('enabled')) {
+            $('.form-row, .form-row *').removeClass('draggable');
+
             // destroy sortable
             $('fieldset').sortable('destroy');
 
@@ -433,15 +522,14 @@ function main() {
             // upload changes
             save(function() {
                 // set mode as disabled and update label
-                $(this).removeClass('enabled').html(
+                $('#admin_hack_mode_move').removeClass('enabled').html(
                     "{% trans 'Move fields' %}").data('saving', 0);
                 
                 // show other modes
                 $('.admin_hack_mode:not(:visible)').slideDown();
             });            
         } else {
-            // open fieldsets
-            $('fieldset.collapsed .collapse-toggle').click();
+            $('.form-row, .form-row *').addClass('draggable');
 
             // make sortable
             $('fieldset:not(.inline-related fieldset)').sortable({
@@ -449,6 +537,12 @@ function main() {
                 forcePlaceholderSize: true,
                 placeholder: 'ui-state-highlight',
                 items: '.form-row',
+                stop: function(e, ui) {
+                    $tabs.find('li').removeClass('switch-on-hover');
+                },
+                start: function(e, ui) {
+                    $tabs.find('li').addClass('switch-on-hover');
+                },
             });
 
             // set mode enabled and label
@@ -459,21 +553,8 @@ function main() {
             $('.admin_hack_mode:not(.enabled)').slideUp();
         }
     });
-}
 
-var $select, currentForm, forms;
-$(document).ready(function() {
-    // make jQuery compatible with django
-    $.ajaxSettings.traditional = true;
- 
-    $('div.tabular.inline-related table').each(function() {
-        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
-            $(this).find('thead').hide();
-        }
-    });
-
-    $select = $('select#id_admin_hack_form');
     forms = {{ forms_dict|as_json }};
-
     main();
 });
+{% endif %}

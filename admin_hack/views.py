@@ -11,7 +11,7 @@ from django.utils import simplejson
 from models import *
 from forms import *
 
-FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/$'
+FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/'
 LIST_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/$'
 
 class AdminHackFormsUpdateView(generic.View):
@@ -86,8 +86,14 @@ class JsHackView(generic.TemplateView):
         # change urls
         m = re.search(FORM_URL_REGEXP, url)
         if m is not None:
-            c['change_view'] = True
             model = get_model(m.group('app'), m.group('model'))
+            for f in model._meta.fields:
+                try:
+                    if f.rel.to == Form:
+                        c['change_view'] = True
+                except:
+                    continue
+
             ctype = ContentType.objects.get_for_model(model)
             c['contenttype'] = ctype
             forms = c['forms'] = Form.objects.filter(

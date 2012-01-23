@@ -10,8 +10,18 @@ register = template.Library()
 @register.inclusion_tag('admin_hack/change_form_tools.html', takes_context=True)
 def admin_hack_change_form_tools(context):
     if context.get('content_type_id', False):
-        context['change_view'] = True
         ctype = ContentType.objects.get_for_id(context['content_type_id'])
+
+        for f in ctype.model_class()._meta.fields:
+            try:
+                if f.rel.to == Form:
+                    context['change_view'] = True
+            except:
+                continue
+
+        if not context.get('change_view', False):
+            return {}
+
         context['contenttype'] = ctype
         forms = context['forms'] = Form.objects.filter(contenttype=ctype
             ).select_related()

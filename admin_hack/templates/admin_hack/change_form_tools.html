@@ -1,6 +1,15 @@
 {% load i18n %}
+{% block content_title %}{% if title %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
+
+{% if change_view %}
+<style type="text/css">
+fieldset { display: none; }
+fieldset h2 { display: none; }
+fieldset.active, fieldset.always_active { display: block; }
+.admin_hack_toggle { display: none; }
+</style>
 <div id="admin_hack">
-	<a href="#" id="toggle_links">toggle setting</a>
+	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
 	<div class="admin_hack_toggle">
 		<ul>
 			<li class="hide_on_full">
@@ -35,3 +44,4 @@
 		</ul>
 	</div>  
 </div>
+{% endif %}
