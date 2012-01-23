@@ -111,10 +111,6 @@ class Form(models.Model):
             ('name', 'contenttype'),
         )
 
-    def get_absolute_url(self):
-        return urlresolvers.reverse('admin:admin_hack_form_change', 
-            args=(self.pk,))
-
     def to_dict(self):
         return {
             'name': self.name,
@@ -123,7 +119,6 @@ class Form(models.Model):
                 'pk': self.contenttype.pk,
             },
             'field_set': [f.to_dict() for f in self.field_set.all()],
-            'absolute_url': self.get_absolute_url(),
         }
 
     def from_dict(self, data):
