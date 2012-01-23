@@ -40,13 +40,3 @@ def patch_admin(site, admin_hack_prefix='/admin_hack/'):
             'all': [settings.STATIC_URL + 'admin_hack/style.css']
         })
         options.__class__.media = media
-
-        #options.__class__.actions.append(admin_export)
-
-        #if 'actstream' in settings.INSTALLED_APPS:
-            #old_save_model = options.save_model
-            #def new_save_model(self, request, obj, form, change):
-                #print self, options.__class__
-                #print 'isinstance', isinstance(self, options.__class__)
-                #return super(options.__class__, self).old_save_model(request, obj, form, change)
-            #options.__class__.save_model = new_save_model
