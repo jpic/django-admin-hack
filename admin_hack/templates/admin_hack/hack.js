@@ -319,8 +319,6 @@ $(document).ready(function() {
     // create the tab list after the first fieldset
     $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
     $tabs = $('#fieldset_tabs');
-    $('fieldset, fieldset.h2').hide();
-    $('fieldset.active, fieldset.always_active').show();
 
     // are there enought fieldsets to make tabs ?
     if ($('fieldset').length < 2) {
