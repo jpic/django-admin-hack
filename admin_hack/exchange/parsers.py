@@ -139,16 +139,16 @@ class CsvParser(object):
                 if isinstance(field, models.DateField):
                     value = get_date_value(value)
 
-                if field.rel:
-                    relation = get_or_create(field.rel.to, {parts[1]: value})
-
                 if isinstance(field, models.ForeignKey):
+                    relation = get_or_create(field.rel.to, {parts[1]: value})
                     setattr(model, parts[0], relation)
                 elif isinstance(field, models.ManyToManyField):
                     # instance needs to have a primary key value before a
                     # many-to-many relationship can be used
                     save_once(model)
-                    getattr(model, parts[0]).add(relation)
+                    for subvalue in value.split(';'):
+                        relation = get_or_create(field.rel.to, {parts[1]: subvalue})
+                        getattr(model, parts[0]).add(relation)
                 else:
                     raise NotImplementedError(
                         'Only FK and M2M are supported, or maybe the field %s is not a relation ?' % action)
