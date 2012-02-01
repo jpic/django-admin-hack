@@ -6,9 +6,6 @@ from django import http
 if 'acstream' in settings.INSTALLED_APPS:
     from actstream import action
 
-from image_cropping.widgets import CropWidget
-CropWidget.Media.js = CropWidget.Media.js[1:]
-
 def enable_custom_values(model, field_name=None):
       #File "/srv/art/art_env/src/admin-hack/admin_hack/__init__.py", line 10, in enable_custom_values
       #models.ForeignKey(model, null=True, blank=True).contribute_to_class(
