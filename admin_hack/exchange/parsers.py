@@ -113,7 +113,6 @@ class CsvParser(object):
                 pass
             
             instance = getattr(model, attribute).create(**kwargs)
-            instance.save()
             return instance
 
         print action, value
@@ -131,7 +130,7 @@ class CsvParser(object):
                         action, kind_choices))
                 else:
                     customvalue = reverse_fk_get_or_create(model, 'customvalue_set', 
-                        {'name': parts[0]})
+                        {'name': parts[0], 'kind': parts[1].replace('_value', '')})
                     setattr(customvalue, parts[1], value)
                     customvalue.save()
 

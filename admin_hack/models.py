@@ -49,11 +49,6 @@ class CustomValue(models.Model):
         upload_to='custom_value_files')
 
     def save(self, *args, **kwargs):
-        for k, v in KIND_CHOICES:
-            val = getattr(self, k + '_value', None)
-            if val is not None:
-                self.kind = k
-                break
         if not self.kind:
             raise Exception('CustomValue *needs* a kind')
         
@@ -61,10 +56,7 @@ class CustomValue(models.Model):
     
     @property
     def value(self):
-        for k, v in KIND_CHOICES:
-            val = getattr(self, k + '_value', None)
-            if val is not None:
-                return val
+        return getattr(self, self.kind + '_value')
 
     def __unicode__(self):
         return u'%s' % self.value
