@@ -77,7 +77,7 @@ class JsHackView(generic.TemplateView):
 
     def get_context_data(self, **kwargs):
         c = kwargs
-        url = self.request.META.get('HTTP_REFERER', '/admin/art/artist/')
+        c['url'] = url = self.request.META.get('HTTP_REFERER', '/admin/art/artist/')
 
         c['smuggler'] = 'smuggler' in settings.INSTALLED_APPS
 
