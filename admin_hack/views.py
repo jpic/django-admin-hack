@@ -87,10 +87,11 @@ class JsHackView(generic.TemplateView):
         m = re.search(FORM_URL_REGEXP, url)
         if m is not None:
             model = get_model(m.group('app'), m.group('model'))
+            c['change_view'] = True
             for f in model._meta.fields:
                 try:
                     if f.rel.to == Form:
-                        c['change_view'] = True
+                        c['admin_hack_form']
                 except:
                     continue
 

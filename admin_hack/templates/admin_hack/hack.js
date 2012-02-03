@@ -66,6 +66,7 @@ function get_field_fieldset(e) {
     return get_fieldset_name(fieldset);
 }
 
+{% if admin_hack_form %}
 function save(callback) {
     $.post(
         '{% url 'admin_hack_forms_update' %}', {
@@ -304,18 +305,13 @@ function main() {
     // trigger a change to update ui
     $select.trigger('change');
 }
+{% endif %}{# endif of: if admin_hack_form #}
 
-var $tabs, $select, currentForm, forms;
+var $tabs {% if admin_hack_form %}, $select, currentForm, forms{% endif %};
 $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
  
-    $('div.tabular.inline-related table').each(function() {
-        if ($(this).find('tbody tr:not(.empty-form)').length == 0) {
-            $(this).find('thead').hide();
-        }
-    });
-
     // create the tab list after the first fieldset
     $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
     $tabs = $('#fieldset_tabs');
@@ -372,6 +368,7 @@ $(document).ready(function() {
     });
     */
 
+    {% if admin_hack_form %}
     $select = $('select#id_admin_hack_form');
 
     // bin the reset button to delete and re-create the current form
@@ -556,5 +553,6 @@ $(document).ready(function() {
 
     forms = {{ forms_dict|as_json }};
     main();
+    {% endif %}
 });
 {% endif %}
