@@ -47,15 +47,19 @@ function get_fieldset_h2(fieldset) {
             return $(child);
         }
     }
-}
 
-function get_fieldset_name(fieldset) {
-    var fieldset_name = '';
-    var fieldset_h2 = get_fieldset_h2(fieldset);
-    return fieldset_h2 ? $.trim(fieldset_h2.html().match(fieldset_re)) : '';
+    if (fieldset.parent().is('.inline-group'))
+        return fieldset.parent().children('h2');
 }
 
 var fieldset_re = /[^(]+/;
+function get_fieldset_name(fieldset) {
+    var fieldset_name = '';
+    var fieldset_h2 = get_fieldset_h2(fieldset);
+    if (fieldset_h2) 
+        return $.trim(fieldset_h2.html().match(fieldset_re));
+}
+
 function get_field_fieldset(e) {
     if (!e.is('.form-row')) {
         e = e.parents('.form-row');
@@ -322,10 +326,25 @@ $(document).ready(function() {
     } else {
         // generate the tab list
         $('fieldset').each(function() {
+            // pass on stacked inlines
+            if ($(this).is('.inline-related:not(.tabular) fieldset'))
+                return
+
             var name = get_fieldset_name($(this));
             if (!name)
                 $(this).addClass('always_active');
             else
+                $tabs.append('<li><a href="javascript:;">'+name+'</a></li>');
+        });
+        // generate the tab list for stacked inline
+        $('.inline-group').each(function() {
+            if ($(this).find('.tabular').length)
+                return 
+
+            $(this).addClass('stacked');
+            var name = get_fieldset_name($(this));
+
+            if (name)
                 $tabs.append('<li><a href="javascript:;">'+name+'</a></li>');
         });
 
@@ -335,7 +354,7 @@ $(document).ready(function() {
             
             // what is the fieldset element
             var fieldset;
-            $('fieldset').each(function() {
+            $('fieldset, .stacked').each(function() {
                 if (name != get_fieldset_name($(this))) return
                 fieldset = $(this);
             });
@@ -344,8 +363,7 @@ $(document).ready(function() {
             if (fieldset.hasClass('active')) return
 
             // deactivate the active fieldset
-            $('fieldset.active').removeClass('active');
-            $('li.active').removeClass('active');
+            $('.active').removeClass('active');
             // activate the related fieldset
             fieldset.addClass('active');
             $(this).addClass('active');
