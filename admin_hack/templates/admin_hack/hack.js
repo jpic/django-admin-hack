@@ -498,6 +498,7 @@ $(document).ready(function() {
             // add the hide button to all fields *except* required and admin_hack_form
             $('#content-main label').each(function() {
                 if ($(this).hasClass('required')) return
+                if ($(this).parents('.inline-group').length) return
                 if (get_field_name($(this)) == 'admin_hack_form') return
 
                 // append the button once per form row
