@@ -323,6 +323,20 @@ function main() {
     if ($select.find('option').length == 0) {
         form = createForm('full');
         $select.find('option').attr('selected', 'selected');
+    } else {
+         for (var i=0; i<forms.length; i++) {
+            if (forms[i].name == 'full') {
+                if (forms[i].field_set.length == 0) {
+                    forms[i].field_set = getFieldSet();
+                    save()
+                }
+            }
+         }
+    }
+    // if the full form has no field then regenerate it
+    if ($select.find('option').length == 0) {
+        form = createForm('full');
+        $select.find('option').attr('selected', 'selected');
     }
 
     // bind change to update the ui

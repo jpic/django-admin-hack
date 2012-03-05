@@ -91,7 +91,7 @@ class JsHackView(generic.TemplateView):
             for f in model._meta.fields:
                 try:
                     if f.rel.to == Form:
-                        c['admin_hack_form']
+                        c['admin_hack_form'] = True
                 except:
                     continue
 
