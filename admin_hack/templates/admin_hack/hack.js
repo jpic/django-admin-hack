@@ -4,6 +4,13 @@
 
 $ = jQuery = django.jQuery
 
+function slugify(text) {
+    text = text.replace(/[^-a-zA-Z0-9,&\s]+/ig, '');
+    text = text.replace(/-/gi, "_");
+    text = text.replace(/\s/gi, "-");
+    return text.toLowerCase();
+}
+
 function admin_hack_html_tag_factory(tag, attributes, contents) {
     var html = '<' + tag;
     for(var key in attributes) {
@@ -325,27 +332,27 @@ $(document).ready(function() {
         $tabs.hide();
     } else {
         // generate the tab list
-        $('fieldset').each(function() {
+        $('fieldset, .inline-group').each(function() {
             // pass on stacked inlines
             if ($(this).is('.inline-related:not(.tabular) fieldset'))
                 return
+            if ($(this).is('.inline-group')) {
+                if ($(this).find('.tabular').length) return
+                $(this).addClass('stacked');
+            }
 
             var name = get_fieldset_name($(this));
+            var slug = slugify(name || '');
+            var error = $(this).find('.errorlist').length > 0;
+            $(this).addClass(slug + '_tab');
+
+            var cls = slug + '_tab';
+            if (error) cls = cls + ' error';
+
             if (!name)
                 $(this).addClass('always_active');
             else
-                $tabs.append('<li><a href="javascript:;">'+name+'</a></li>');
-        });
-        // generate the tab list for stacked inline
-        $('.inline-group').each(function() {
-            if ($(this).find('.tabular').length)
-                return 
-
-            $(this).addClass('stacked');
-            var name = get_fieldset_name($(this));
-
-            if (name)
-                $tabs.append('<li><a href="javascript:;">'+name+'</a></li>');
+                $tabs.append('<li class="'+cls+'"><a href="javascript:;">'+name+'</a></li>');
         });
 
         $tabs.find('li').click(function() {
@@ -368,7 +375,10 @@ $(document).ready(function() {
             fieldset.addClass('active');
             $(this).addClass('active');
         });
-        $tabs.find('li:first').click();
+        if ($tabs.find('li.error').length)
+            $tabs.find('li.error:first').click();
+        else
+            $tabs.find('li:first').click();
     }
 
     /* This should work but for some reason it doesn't
