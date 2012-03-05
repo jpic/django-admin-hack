@@ -21,6 +21,14 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
+$(document).ready(function() {
+    $('.ui-autocomplete-input').live('focus', function() {
+        if (!$.trim($(this).val())) {
+            $(this).autocomplete('search', ' ');
+        }
+    });
+});
+
 {% if change_view %}
 var strip_id_re = /^id_/;
 var is_autocomplete_re = /_text$/
