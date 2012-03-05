@@ -1,12 +1,11 @@
 {% load i18n %}
-{% block content_title %}{% if title %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
 
-{% if change_view %}
+
+{% if change_view and '_popup' not in request.GET.keys %}
 <style type="text/css">
-fieldset { display: none; }
-fieldset h2 { display: none; }
-fieldset.active, fieldset.always_active { display: block; }
-.admin_hack_toggle { display: none; }
+    fieldset , fieldset h2, .stacked { display: none; }
+    .active, .always_active, .active.stacked fieldset { display: block !important; }
+    .admin_hack_toggle { display: none; }
 </style>
 <div id="admin_hack">
 	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
