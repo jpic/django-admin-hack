@@ -1,7 +1,8 @@
-from django.core.management.sql import emit_post_sync_signal
+from django.db.models.signals import post_syncdb
 
-from ..models import Field
+from admin_hack import models as admin_hack_models
+from admin_hack.models import Field
 
 def reset_full_forms(sender, **kwargs):
     Field.objects.filter(form__name='full').delete()
-emit_post_sync_signal.connect(reset_full_forms)
+post_syncdb.connect(reset_full_forms, sender=admin_hack_models)
