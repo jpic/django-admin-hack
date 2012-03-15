@@ -124,6 +124,22 @@ function get_field_fieldset(e) {
 }
 
 {% if admin_hack_form %}
+
+function enable_sortable() {
+    $('fieldset:not(.inline-related fieldset):visible').sortable({
+        connectWith: 'fieldset',
+        forcePlaceholderSize: true,
+        placeholder: 'ui-state-highlight',
+        items: '.form-row',
+        stop: function(e, ui) {
+            $tabs.find('li').removeClass('switch-on-hover');
+        },
+        start: function(e, ui) {
+            $tabs.find('li').addClass('switch-on-hover');
+        },
+    });
+}
+
 function save(callback) {
     $.post(
         '{% url 'admin_hack_forms_update' %}', {
@@ -466,6 +482,12 @@ $(document).ready(function() {
             // activate the related fieldset
             fieldset.addClass('active');
             $(this).addClass('active');
+
+            if ($('#admin_hack_mode_move').hasClass('enabled')) {
+                // re enable sortable
+                $('fieldset').sortable('destroy');
+                enable_sortable();
+            }
         });
         if ($tabs.find('li.error').length)
             $tabs.find('li.error:first').click();
@@ -690,21 +712,10 @@ $(document).ready(function() {
                 $('.admin_hack_mode:not(:visible)').slideDown();
             });            
         } else {
-            $('.form-row, .form-row *').addClass('draggable');
+            $('.form-row').addClass('draggable');
 
             // make sortable
-            $('fieldset:not(.inline-related fieldset)').sortable({
-                connectWith: 'fieldset',
-                forcePlaceholderSize: true,
-                placeholder: 'ui-state-highlight',
-                items: '.form-row',
-                stop: function(e, ui) {
-                    $tabs.find('li').removeClass('switch-on-hover');
-                },
-                start: function(e, ui) {
-                    $tabs.find('li').addClass('switch-on-hover');
-                },
-            });
+            enable_sortable();
 
             // set mode enabled and label
             $(this).addClass('enabled').html(
