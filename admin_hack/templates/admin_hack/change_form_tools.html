@@ -1,12 +1,43 @@
 {% load i18n %}
 
+<style type="text/css">
+.black_overlay{
+    display: none;
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    z-index:10001;
+    -moz-opacity: 0.8;
+    opacity:.80;
+    filter: alpha(opacity=80);
+}
+ 
+.white_content {
+    display: none;
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    padding: 16px;
+    border: 16px solid orange;
+    background-color: white;
+    z-index:10002;
+    overflow: auto;
+}
+</style>
+
+<div style="display:none" id="admin_hack_create_field_template">
+    {% trans 'Field kind' %}: {{ kind_select }}
+    {% trans 'Field name' %}: <input type="text" name="admin_hack_create_field_name" />
+    <span class="btn success" id="admin_hack_create_field_continue">{% trans 'Continue' %}</span>
+    <span class="btn danger" id="admin_hack_create_field_cancel">{% trans 'Cancel' %}</span>
+</div>
 
 {% if change_view and '_popup' not in request.GET.keys %}
-<style type="text/css">
-    fieldset , fieldset h2, .stacked { display: none; }
-    .active, .always_active, .active.stacked fieldset { display: block !important; }
-    .admin_hack_toggle { display: none; }
-</style>
 <div id="admin_hack">
 	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
 	<div class="admin_hack_toggle">
@@ -17,7 +48,7 @@
     			</span>
 			</li>
 			<li class="hide_on_full">
-				<span class="toggle_add_btn admin_hack_mode" title="{% trans 'Add fields to the selected form model' %}" id="admin_hack_mode_show">
+				<span class="toggle_add_btn admin_hack_mode" title="{% trans 'Un-remove fields to the selected form model' %}" id="admin_hack_mode_show">
         			{% trans 'Un-remove fields' %}
     			</span>
 			</li>
@@ -26,6 +57,9 @@
         			{% trans 'Move fields' %}
     			</span>
 			</li>
+            <li class="hide_on_full">
+                <span class="toggle_create_btn admin_hack_mode" title="{% trans 'Create a new field in the current tab' %}" id="admin_hack_create_field">{% trans 'Create field' %}</span>
+            </li>
 			<li>
 				<span title="{% trans 'Create a new form model' %}" id="admin_hack_create">
         			{% trans 'New form' %}

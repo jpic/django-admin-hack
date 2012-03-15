@@ -126,6 +126,7 @@ class Field(models.Model):
     form = models.ForeignKey('Form')
     name = models.CharField(max_length=100)
     order = models.IntegerField(default=0)
+    kind = models.CharField(choices=KIND_CHOICES, max_length=10, null=True, blank=True)
     fieldset = models.CharField(max_length=100, null=True, blank=True)
 
     def __unicode__(self):

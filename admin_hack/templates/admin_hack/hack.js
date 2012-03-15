@@ -21,6 +21,23 @@ function admin_hack_html_tag_factory(tag, attributes, contents) {
     return html;
 }
 
+function form_row_factory(label, name, kind) {
+    html = ['<div class="form-row '+name+'">'];
+    custom_value = false;
+    
+    $('.custom-values_tab tr').each(function() {
+        if ($(this).find('td.name input').val() == name) {
+            custom_value = $(this);
+        }
+    });
+
+    if (custom_value) {
+    } else {
+    }
+    
+    html.push('</div>');
+}
+
 $(document).ready(function() {
     $('.ui-autocomplete-input').live('focus', function() {
         if (!$.trim($(this).val())) {
@@ -308,6 +325,38 @@ function updateUi() {
         $('.admin_hack_hidden').length == 0 ? $('#admin_hack_mode_show').parent().hide() : $('#admin_hack_mode_show').parent().show();
 }
 
+function updateCustomValues() {
+    var $custom_values_tab = $('fieldset.custom-values_tab');
+    $('.custom-values_tab tr').each(function() {
+        if (!$.trim($(this).find('td.name input').val())) {
+            return;
+        }
+        
+        var label = $(this).find('td.name input').val();
+        var slug = $.trim($(this).find('td.name .slug').html());
+        var kind = $(this).find('td.kind select').val();
+        var $value = $(this).find('td.value span.'+kind);
+        var value_id = 'id_' + slug;
+        $value.attr('id', value_id);
+
+        html = ['<div class="form-row '+slug+'"><div>'];
+        html.push('<label for="'+value_id+'">');
+        html.push(label);
+        html.push(':</label>');
+        html.push('<div style="display:none" class="extra"></div>');
+        html.push('</div></div>');
+
+        $custom_values_tab.find('h2').after(html.join(''));
+
+        var $row = $('div.form-row.'+slug);
+        $row.find('label').after($value);
+        $(this).find('input, select').appendTo($row.find('.extra'));
+        $(this).remove();
+    });
+    $custom_values_tab.find('.form-row').appendTo('fieldset:first');
+
+}
+
 function main() {
     // clean options
     $select.find('option').each(function() {
@@ -365,7 +414,7 @@ var $tabs {% if admin_hack_form %}, $select, currentForm, forms{% endif %};
 $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
- 
+
     // create the tab list after the first fieldset
     $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
     $tabs = $('#fieldset_tabs');
@@ -440,6 +489,49 @@ $(document).ready(function() {
     */
 
     {% if admin_hack_form %}
+    $(document).keyup(function(e) {
+        if (e.keyCode == 13) {
+            $('#admin_hack_create_field_continue:visible').click();
+        }
+        if (e.keyCode == 27) {
+            $('#admin_hack_create_field_cancel:visible').click();
+        }
+    });
+
+    $('body').append('<div id="admin_hack_modal" class="white_content"></div>');
+    $('body').append('<div id="admin_hack_overlay" class="black_overlay"></div>');
+    $('#admin_hack_modal').append($('#admin_hack_create_field_template').html());
+    $('#admin_hack_create_field_template').remove();
+    $('#admin_hack_create_field_continue').click(function() {
+        if (!$.trim($('input[name=admin_hack_create_field_name]').val())) {
+            alert('{% trans 'Please set the name of the field you want to add' %}');
+            return;
+        }
+        $('#admin_hack_modal, #admin_hack_overlay').hide();
+        var label = $('input[name=admin_hack_create_field_name]').val();
+        var slug = slugify(label);
+        var kind = $('select[name=admin_hack_create_field_kind]').val();
+        
+        $('fieldset.custom-values_tab .add-row a').click();
+        var $tr = $('fieldset.custom-values_tab tr.dynamic-customvalue_set:last');
+        $tr.find('td.name input').val(label);
+        $tr.find('td.kind select').val(kind);
+        $tr.find('td.kind select').change();
+        $tr.find('td.name .slug').html(slug);
+        updateCustomValues();
+        // parse current form fieldset
+        currentForm.field_set = getFieldSet();
+        save();
+    });
+    $('#admin_hack_create_field_cancel').click(function() {
+        $('#admin_hack_modal, #admin_hack_overlay').hide();
+    });
+    $('#admin_hack_create_field').click(function() {
+        $('#admin_hack_modal, #admin_hack_overlay').show();
+    });
+
+    updateCustomValues();
+
     $select = $('select#id_admin_hack_form');
 
     // bin the reset button to delete and re-create the current form

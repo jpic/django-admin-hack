@@ -2,8 +2,9 @@ from django import template
 from django.utils import simplejson
 from django.utils.safestring import mark_safe
 from django.contrib.contenttypes.models import ContentType
+from django.forms import Select
 
-from admin_hack.models import Form, FormForModel
+from admin_hack.models import Form, FormForModel, KIND_CHOICES
 
 register = template.Library()
 
@@ -35,6 +36,9 @@ def admin_hack_change_form_tools(context):
                     object_id=original.pk)
             except FormForModel.DoesNotExist:
                 pass
+
+    context['kind_select'] = Select(choices=KIND_CHOICES).render(
+        'admin_hack_create_field_kind', None)
 
     return context
 
