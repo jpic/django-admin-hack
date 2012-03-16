@@ -268,6 +268,7 @@ function getFieldSet() {
 
     return new_field_set
 }
+
 function updateUi() {
     // hide stuff that should not be there when full is selected
     currentForm.name == 'full' ? $('.hide_on_full').hide() : $('.hide_on_full').show();
@@ -430,6 +431,56 @@ function main() {
     }
     // trigger a change to update ui
     $select.trigger('change');
+}
+
+function force_save_form() {
+    // are there record changes pending ?
+    var submit_row_shown = $('#content-main .submit-row:visible').length;
+
+    // hide record save buttons
+    $('#content-main .submit-row input[type=submit]').hide();
+
+    // add form save button
+    var button = admin_hack_html_tag_factory('span', {
+        'class': 'btn success admin_hack_save',
+        'title': "{% trans 'Save the current form configuration' %}",
+    }, "{% trans 'Save form configuration' %}");
+    $('#content-main .submit-row').append(button);
+
+    // bind form save button to disable the mode
+    $('#content-main .submit-row .admin_hack_save').click(function() {
+        // disable mode
+        $('#admin_hack .enabled').click();
+
+        // hide submit row if no pending changes
+        if (!submit_row_shown) {
+            $('#content-main .submit-row').hide();
+        }
+
+        // delete this button
+        $(this).remove();
+
+        // if pending changes, show submit_row again
+        if (submit_row_shown) {
+            $('#content-main .submit-row').append('<p class="admin_hack_saving">{% trans 'Saving form modifications ...' %}</p>');
+            show_submit_row_if_saved = function() {
+                if ($('#admin_hack .enabled').length) {
+                    setTimeout(show_submit_row_if_saved, 1000);
+                } else {
+                    $('#content-main .submit-row .admin_hack_saving').hide();
+                    // unhide record save
+                    $('#content-main .submit-row input[type=submit]').show();
+                }
+            }
+            show_submit_row_if_saved()
+        } else {
+            // unhide record save
+            $('#content-main .submit-row input[type=submit]').show();
+        }
+    });
+    
+    // show submit row
+    $('#content-main .submit-row').show();
 }
 {% endif %}{# endif of: if admin_hack_form #}
 
@@ -633,6 +684,8 @@ $(document).ready(function() {
             
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
+
+            force_save_form();
         }
     });
 
@@ -690,6 +743,8 @@ $(document).ready(function() {
             
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
+            
+            force_save_form();
         }
     });
 
@@ -730,6 +785,8 @@ $(document).ready(function() {
             
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
+
+            force_save_form();
         }
     });
 
