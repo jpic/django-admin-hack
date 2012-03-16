@@ -120,7 +120,8 @@ class Form(models.Model):
         self.field_set.all().delete()
         for field_dict in data['field_set']:
             field = self.field_set.create(name=field_dict['name'], 
-                order=field_dict['order'], fieldset=field_dict.get('fieldset', None))
+                kind=field_dict.get('kind', None), order=field_dict['order'], 
+                fieldset=field_dict.get('fieldset', None))
 
 class Field(models.Model):
     form = models.ForeignKey('Form')
@@ -142,6 +143,7 @@ class Field(models.Model):
         return {
             'pk': self.pk,
             'name': self.name,
+            'kind': self.kind,
             'order': self.order,
             'fieldset': self.fieldset,
         }

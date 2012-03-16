@@ -229,6 +229,7 @@ function createForm(name) {
     save()
 }
 
+customvalue_re = /customvalue_set-(\d+)-([a-z]+)_value/;
 function getFieldSet() {
     var new_field_set = [];
     var order = 0;
@@ -246,12 +247,18 @@ function getFieldSet() {
         }
 
         var fieldset = get_field_fieldset($(this));
-
-        new_field_set.push({
+        var field = {
             name: name,
             order: order,
             fieldset: fieldset,
-        })
+        }
+
+        var m = name.match(customvalue_re);
+        if (m) {
+            field.kind = m[2];
+        }
+
+        new_field_set.push(field)
         names.push(name);
 
         order = order +1;
