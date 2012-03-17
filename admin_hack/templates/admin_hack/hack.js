@@ -68,19 +68,35 @@ $(document).ready(function() {
 {% endif %}
 
 {% if change_view %}
+
+var customvalue_re = /customvalue_set-(\d+)-([a-z]+)_value/;
+var customvalue_kind_re = /customvalue_set-(\d+)-kind/;
+var customvalue_name_re = /customvalue_set-(\d+)-name/;
+
 var strip_id_re = /^id_/;
 var is_autocomplete_re = /_text$/
 function get_field_name(e) {
     if (!e.is('.form-row')) {
         e = e.parents('.form-row');
     }
+    
+    var custom_name = false;
+    e.find('input').each(function() {
+        if ($(this).attr('name').match(customvalue_name_re)) {
+            custom_name = $(this);
+        }
+    });
 
-    var id = e.find('label').attr('for');
-    var name = id.replace(strip_id_re, '');
+    if (custom_name) {
+        var name = custom_name.val();
+    } else {
+        var id = e.find('label').attr('for');
+        var name = id.replace(strip_id_re, '');
 
-    if (name.match(is_autocomplete_re)) {
-        if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
-            name = name.replace(is_autocomplete_re, '');
+        if (name.match(is_autocomplete_re)) {
+            if ($('#id_'+ name.replace(is_autocomplete_re, '_on_deck')).length) {
+                name = name.replace(is_autocomplete_re, '');
+            }
         }
     }
 
@@ -88,7 +104,10 @@ function get_field_name(e) {
 }
 
 function get_field_container(name) {
-    return $('.form-row.' + name);
+    var test = $('.form-row.' + name);
+    if (test.length) return test;
+    var test = $('.form-row.' + slugify(name));
+    if (test.length) return test;
 }
 
 function get_fieldset_h2(fieldset) {
@@ -229,7 +248,6 @@ function createForm(name) {
     save()
 }
 
-customvalue_re = /customvalue_set-(\d+)-([a-z]+)_value/;
 function getFieldSet() {
     var new_field_set = [];
     var order = 0;
@@ -253,9 +271,24 @@ function getFieldSet() {
             fieldset: fieldset,
         }
 
-        var m = name.match(customvalue_re);
-        if (m) {
-            field.kind = m[2];
+        var row = $('.form-row.'+name);
+        if (row.find('.customvalue_extra').length) {
+            field.slug = field.name;
+
+            var select = false;
+            row.find('select').each(function() {
+                if ($(this).attr('name').match(customvalue_kind_re)) {
+                    select = $(this);
+                }
+            });
+
+            var input = false;
+            row.find('input').each(function() {
+                if ($(this).attr('name').match(customvalue_name_re)) {
+                    input = $(this);
+                }
+            });
+            field.name = input.val();
         }
 
         new_field_set.push(field)
@@ -279,6 +312,10 @@ function updateUi() {
         var field = currentForm.field_set[i];
 
         e = get_field_container(field.name);
+        if (e == undefined || !e.length) {
+            console.log(field);
+            continue;
+        }
 
         var fieldset;
         if (field.fieldset) {
@@ -357,7 +394,7 @@ function updateCustomValues() {
         }
         
         var label = $(this).find('td.name input').val();
-        var slug = $.trim($(this).find('td.name .slug').html());
+        var slug = slugify($.trim($(this).find('td.name input').val()));
         var kind = $(this).find('td.kind select').val();
         var $value = $(this).find('td.value span.'+kind);
         var value_id = 'id_' + slug;
@@ -367,14 +404,14 @@ function updateCustomValues() {
         html.push('<label for="'+value_id+'">');
         html.push(label);
         html.push(':</label>');
-        html.push('<div style="display:none" class="extra"></div>');
+        html.push('<div style="display:none" class="customvalue_extra"></div>');
         html.push('</div></div>');
 
         $custom_values_tab.find('h2').after(html.join(''));
 
         var $row = $('div.form-row.'+slug);
         $row.find('label').after($value);
-        $(this).find('input, select').appendTo($row.find('.extra'));
+        $(this).find('input, select').appendTo($row.find('.customvalue_extra'));
         $(this).remove();
     });
     $custom_values_tab.find('.form-row').appendTo('fieldset:first');
@@ -433,9 +470,43 @@ function main() {
     $select.trigger('change');
 }
 
-function force_save_form() {
-    // are there record changes pending ?
-    var submit_row_shown = $('#content-main .submit-row:visible').length;
+function show_save_form(pending_record_changes) {
+    function update_submit_row_with_pending_record_changes() {
+        update_submit_row(true);
+    }
+    function update_submit_row_without_pending_record_changes() {
+        update_submit_row(false);
+    }
+
+    var update_submit_row = function(pending_record_changes) {
+        // remove form save button
+        $('#content-main .submit-row .admin_hack_save').remove();
+
+        // put a loading text
+        if (!$('#content-main .submit-row .admin_hack_loading').length) {
+            $('#content-main .submit-row').append(
+                '<p class="admin_hack_loading">{% trans 'Saving form changes ... '%}</p>');
+        }
+
+        // if not saved run me again later
+        if ($('#admin_hack .enabled').length) {
+            if (pending_record_changes)
+                setTimeout(update_submit_row_with_pending_record_changes, 1000);
+            else
+                setTimeout(update_submit_row_without_pending_record_changes, 1000);
+            return
+        }
+
+         $('#content-main .submit-row .admin_hack_loading').remove();
+
+        // hide bar if no pending record changes
+        if (! pending_record_changes) {
+            $('#content-main .submit-row').hide();
+        }
+
+        // show record save buttons
+        $('#content-main .submit-row input[type=submit]').show();
+    }
 
     // hide record save buttons
     $('#content-main .submit-row input[type=submit]').hide();
@@ -446,41 +517,20 @@ function force_save_form() {
         'title': "{% trans 'Save the current form configuration' %}",
     }, "{% trans 'Save form configuration' %}");
     $('#content-main .submit-row').append(button);
+    
+    // show submit row
+    $('#content-main .submit-row').show();
+
+    // bind save form widget to update submit row
+    $('#admin_hack .enabled').one('click', function() {
+        update_submit_row(pending_record_changes);
+    });
 
     // bind form save button to disable the mode
     $('#content-main .submit-row .admin_hack_save').click(function() {
         // disable mode
         $('#admin_hack .enabled').click();
-
-        // hide submit row if no pending changes
-        if (!submit_row_shown) {
-            $('#content-main .submit-row').hide();
-        }
-
-        // delete this button
-        $(this).remove();
-
-        // if pending changes, show submit_row again
-        if (submit_row_shown) {
-            $('#content-main .submit-row').append('<p class="admin_hack_saving">{% trans 'Saving form modifications ...' %}</p>');
-            show_submit_row_if_saved = function() {
-                if ($('#admin_hack .enabled').length) {
-                    setTimeout(show_submit_row_if_saved, 1000);
-                } else {
-                    $('#content-main .submit-row .admin_hack_saving').hide();
-                    // unhide record save
-                    $('#content-main .submit-row input[type=submit]').show();
-                }
-            }
-            show_submit_row_if_saved()
-        } else {
-            // unhide record save
-            $('#content-main .submit-row input[type=submit]').show();
-        }
-    });
-    
-    // show submit row
-    $('#content-main .submit-row').show();
+    }); 
 }
 {% endif %}{# endif of: if admin_hack_form #}
 
@@ -685,7 +735,7 @@ $(document).ready(function() {
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
 
-            force_save_form();
+            show_save_form($('#content-main .submit-row:visible').length > 0);
         }
     });
 
@@ -744,7 +794,7 @@ $(document).ready(function() {
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
             
-            force_save_form();
+            show_save_form($('#content-main .submit-row:visible').length > 0);
         }
     });
 
@@ -786,7 +836,7 @@ $(document).ready(function() {
             // hide other modes
             $('.admin_hack_mode:not(.enabled)').slideUp();
 
-            force_save_form();
+            show_save_form($('#content-main .submit-row:visible').length > 0);
         }
     });
 
