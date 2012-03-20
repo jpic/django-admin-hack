@@ -271,16 +271,15 @@ function getFieldSet() {
             fieldset: fieldset,
         }
 
-        var row = $('.form-row.'+name);
+        var row = $('.form-row.'+slugify(name));
         if (row.find('.customvalue_extra').length) {
-            field.slug = field.name;
-
             var select = false;
             row.find('select').each(function() {
                 if ($(this).attr('name').match(customvalue_kind_re)) {
                     select = $(this);
                 }
             });
+            field.kind = select.val();
 
             var input = false;
             row.find('input').each(function() {
