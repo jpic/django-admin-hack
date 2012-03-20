@@ -305,6 +305,32 @@ function updateUi() {
     // hide stuff that should not be there when full is selected
     currentForm.name == 'full' ? $('.hide_on_full').hide() : $('.hide_on_full').show();
 
+    // fill custom values
+    for(var i=0; i < currentForm.field_set.length; i++) {
+        var field = currentForm.field_set[i];
+
+        e = get_field_container(field.name);
+        if (e == undefined || !e.length) {
+            var found = false;
+            $('fieldset.custom-values_tab table tr:not(.add-row):not(.empty-form)').each(function() {
+                if ($(this).find('tr.name input').val() == field.name) {
+                    found = true;
+                }
+            });
+
+            if (found) {
+                continue
+            }
+
+            $('fieldset.custom-values_tab .add-row a').click();
+            var row = $('fieldset.custom-values_tab tr:not(.add-row):not(.empty-form):last');
+            row.find('td.name input').val(field.name);
+            row.find('td.kind select').val(field.kind);
+            row.find('td.kind select').trigger('change');
+        }
+    }
+    updateCustomValues();
+
     /* let's re-order some fields yay */
     var previous, e;
     for(var i=0; i < currentForm.field_set.length; i++) {
@@ -312,7 +338,6 @@ function updateUi() {
 
         e = get_field_container(field.name);
         if (e == undefined || !e.length) {
-            console.log(field);
             continue;
         }
 
