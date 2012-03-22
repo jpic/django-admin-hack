@@ -72,8 +72,11 @@ class JsHackView(generic.TemplateView):
     template_name = 'admin_hack/hack.js'
 
     def render_to_response(self, context):
-        return super(JsHackView, self).render_to_response(context,
+        response = super(JsHackView, self).render_to_response(context,
             content_type='text/javascript')
+        response['Cache-Control'] = 'no-cache'
+        response['Pragma'] = 'no-cache'
+        return response
 
     def get_context_data(self, **kwargs):
         c = kwargs
