@@ -1,5 +1,6 @@
 {% load i18n %}
 
+{% if change_view and '_popup' not in request.GET.keys %}
 <style type="text/css">
 .black_overlay{
     display: none;
@@ -28,6 +29,10 @@
     z-index:10002;
     overflow: auto;
 }
+
+fieldset , fieldset h2, .stacked { display: none; }
+.active, .always_active, .active.stacked fieldset { display: block !important; }
+.admin_hack_toggle { display: none; }
 </style>
 
 <div style="display:none" id="admin_hack_create_field_template">
@@ -37,7 +42,6 @@
     <span class="btn danger" id="admin_hack_create_field_cancel">{% trans 'Cancel' %}</span>
 </div>
 
-{% if change_view and '_popup' not in request.GET.keys %}
 <div id="admin_hack">
 	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
 	<div class="admin_hack_toggle">

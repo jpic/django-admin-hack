@@ -563,14 +563,12 @@ $(document).ready(function() {
     // make jQuery compatible with django
     $.ajaxSettings.traditional = true;
 
-    // create the tab list after the first fieldset
-    $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
-    $tabs = $('#fieldset_tabs');
-
     // are there enought fieldsets to make tabs ?
-    if ($('fieldset').length < 2) {
-        $tabs.hide();
-    } else {
+    if ($('fieldset').length > 1) {
+        // create the tab list after the first fieldset
+        $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
+        $tabs = $('#fieldset_tabs');
+
         // generate the tab list
         $('fieldset, .inline-group').each(function() {
             // pass on stacked inlines
