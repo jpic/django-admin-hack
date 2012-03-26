@@ -26,14 +26,3 @@ def admin_export(modeladmin, request, queryset):
         url += '&pk=%s' % (item.pk)
     return http.HttpResponseRedirect(url)
 admin_export.short_description = _(u'Export selected items to CSV')
-
-def patch_admin(site, admin_hack_prefix='/admin_hack/'):
-    for model, options in site._registry.items():
-        # smelly code, obfuscation over metaclass FTW
-        media = options.media
-        media.add_js(['%shack.js' % admin_hack_prefix])
-        media.add_js([settings.STATIC_URL + 'admin_hack/jquery.json.min.js'])
-        media.add_css({
-            'all': [settings.STATIC_URL + 'admin_hack/style.css']
-        })
-        options.__class__.media = media

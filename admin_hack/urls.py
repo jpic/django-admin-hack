@@ -8,11 +8,6 @@ import views
 
 urlpatterns = patterns('',
     url(
-        r'^hack.js$',
-        views.JsHackView.as_view(),
-        name='admin_hack_js_hack'
-    ),
-    url(
         r'^export/$',
         views.ExportView.as_view(),
         name='admin_hack_export',

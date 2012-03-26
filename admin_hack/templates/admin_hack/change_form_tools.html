@@ -1,6 +1,46 @@
 {% load i18n %}
+{% load url from future %}
 
-{% if change_view and '_popup' not in request.GET.keys %}
+{% if '_popup' not in request.GET.keys %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin_hack/style.css" />
+<script type="text/javascript" src="{{ STATIC_URL }}admin_hack/jquery.json.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}admin_hack/lib.js"></script>
+<script type="text/javascript">
+var AdminHack = {
+    messages: {
+        save: "{% trans "Save your changes" %}",
+        saving: "{% trans "Saving your changes" %}",
+        remove_fields: "{% trans "Remove fields" %}",
+        remove: "{% trans 'Remove' %}",
+        unremove_fields: "{% trans 'Un-remove fields' %}",
+        unremove_help: "{% trans 'Keep this field visible in current form configuration' %}",
+        unremove: "{% trans 'Keep' %}",
+        hide_field: "{% trans 'Hide this field' %}",
+        move_fields: "{% trans "Move fields" %}",
+        full_protected: "{% trans "You may not remove the 'full' form. It serves as reference." %}",
+        confirm_form_delete: "{% trans "Are you sure you want to this form model" %}",
+        no_going_back: "{% trans "There is no going back once you push the confirmation button" %}",
+        new_form_name: "{% trans "How should we name the new form ?" %}",
+        new_field_name: "{% trans "Please set the name of the field you want to add" %}",
+    },
+    urls: {
+        admin_hack_forms_update: "{% url 'admin_hack_forms_update' %}",
+    },
+    forms: {{ forms_dicts }},
+    regexps: {
+        customvalue: /customvalue_set-(\d+)-([a-z]+)_value/,
+        customvalue_kind: /customvalue_set-(\d+)-kind/,
+        customvalue_name: /customvalue_set-(\d+)-name/,
+        strip_id: /^id_/,
+        is_autocomplete: /_text$/,
+        fieldset: /[^(]+/,
+    },
+    contenttype_pk: {{ content_type_id }},
+    forms_pks: {{ forms_pks }},
+}
+</script>
+<script type="text/javascript" src="{{ STATIC_URL }}admin_hack/change_form.js"></script>
+
 <style type="text/css">
 .black_overlay{
     display: none;
@@ -30,7 +70,7 @@
     overflow: auto;
 }
 
-fieldset , fieldset h2, .stacked { display: none; }
+fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 .active, .always_active, .active.stacked fieldset { display: block !important; }
 .admin_hack_toggle { display: none; }
 </style>
