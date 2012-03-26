@@ -1,6 +1,3 @@
-var $select = $('select#id_admin_hack_form').length ? $('select#id_admin_hack_form') : false;
-var $tabs;
-
 AdminHack.get_field_name = function(e) {
     if (!e.is('.form-row')) {
         e = e.parents('.form-row');
@@ -74,10 +71,10 @@ AdminHack.enable_sortable = function() {
         placeholder: 'ui-state-highlight',
         items: '.form-row',
         stop: function(e, ui) {
-            $tabs.find('li').removeClass('switch-on-hover');
+            AdminHack.tabs.find('li').removeClass('switch-on-hover');
         },
         start: function(e, ui) {
-            $tabs.find('li').addClass('switch-on-hover');
+            AdminHack.tabs.find('li').addClass('switch-on-hover');
         },
     });
 }
@@ -90,14 +87,14 @@ AdminHack.save = function(callback) {
             AdminHack.forms = data;
 
             for (var i = 0; i < data.length; i++) {
-                if (!$select.find('option[value='+data[i].pk+']').length) {
-                    $select.append('<option value="'+data[i].pk+'">'+data[i].name+'</option>');
+                if (!AdminHack.form_select.find('option[value='+data[i].pk+']').length) {
+                    AdminHack.form_select.append('<option value="'+data[i].pk+'">'+data[i].name+'</option>');
                 }
 
                 if (data[i].name == AdminHack.currentForm.name) {
                     AdminHack.currentForm = data[i];
-                    $select.val(data[i].pk);
-                    $select.trigger('change');
+                    AdminHack.form_select.val(data[i].pk);
+                    AdminHack.form_select.trigger('change');
                     break;
                 }
             }
@@ -118,7 +115,7 @@ AdminHack.deleteForm = function() {
     var confirmed = confirm(AdminHack.messages.confirm_form_delete + ' ' + AdminHack.currentForm.name + '" ? ' + AdminHack.messages.no_going_back);
 
     if (confirmed) {
-        $select.find('option[value='+AdminHack.currentForm.pk+']').remove();
+        AdminHack.form_select.find('option[value='+AdminHack.currentForm.pk+']').remove();
         var full;
         for(var i=0; i < AdminHack.forms.length; i++) {
             if (AdminHack.forms[i].name == 'full') {
@@ -132,12 +129,12 @@ AdminHack.deleteForm = function() {
 
         AdminHack.save();
         AdminHack.currentForm = full;
-        $select.val(full.pk);
-        $select.trigger('change');
+        AdminHack.form_select.val(full.pk);
+        AdminHack.form_select.trigger('change');
     }
 }
 
-createForm = function(name) {
+AdminHack.createForm = function(name) {
     var field_set;
 
     // prompt for a name if necessarry
@@ -153,7 +150,7 @@ createForm = function(name) {
         }
     }
     if (!field_set) {
-        field_set = getFieldSet();
+        field_set = AdminHack.getFieldSet();
     }
 
     // create a new form array
@@ -171,7 +168,7 @@ createForm = function(name) {
     AdminHack.save()
 }
 
-getFieldSet = function() {
+AdminHack.getFieldSet = function() {
     var new_field_set = [];
     var order = 0;
     var cv = this;
@@ -224,7 +221,7 @@ getFieldSet = function() {
     return new_field_set
 }
 
-updateUi = function() {
+AdminHack.updateUi = function() {
     // hide stuff that should not be there when full is selected
     AdminHack.currentForm.name == 'full' ? $('.hide_on_full').hide() : $('.hide_on_full').show();
 
@@ -314,7 +311,7 @@ updateUi = function() {
         if (!name) return;
 
         var tab;
-        $tabs.find('li a').each(function() {
+        AdminHack.tabs.find('li a').each(function() {
             if ($(this).html() == name) {
                 tab = $(this).parent();
             }
@@ -367,7 +364,7 @@ AdminHack.updateCustomValues = function() {
 
 AdminHack.change_form_main = function() {
     // clean options
-    $select.find('option').each(function() {
+    AdminHack.form_select.find('option').each(function() {
         if ($.inArray(parseInt($(this).attr('value')), AdminHack.forms_pks) == -1) {
             $(this).remove();
         }
@@ -377,44 +374,44 @@ AdminHack.change_form_main = function() {
     });
 
     // create the full form if it doesn't exist
-    if ($select.find('option').length == 0) {
-        form = createForm('full');
-        $select.find('option').attr('selected', 'selected');
+    if (AdminHack.form_select.find('option').length == 0) {
+        form = AdminHack.createForm('full');
+        AdminHack.form_select.find('option').attr('selected', 'selected');
     } else {
          for (var i=0; i<AdminHack.forms.length; i++) {
             if (AdminHack.forms[i].name == 'full') {
                 if (AdminHack.forms[i].field_set.length == 0) {
-                    AdminHack.forms[i].field_set = getFieldSet();
+                    AdminHack.forms[i].field_set = AdminHack.getFieldSet();
                     AdminHack.save()
                 }
             }
          }
     }
     // if the full form has no field then regenerate it
-    if ($select.find('option').length == 0) {
-        form = createForm('full');
-        $select.find('option').attr('selected', 'selected');
+    if (AdminHack.form_select.find('option').length == 0) {
+        form = AdminHack.createForm('full');
+        AdminHack.form_select.find('option').attr('selected', 'selected');
     }
 
     // bind change to update the ui
-    $select.change(function() {
+    AdminHack.form_select.change(function() {
         // find the form
         for (var i=0; i<AdminHack.forms.length; i++) {
             if (AdminHack.forms[i].pk == $(this).val()) {
                 AdminHack.currentForm = AdminHack.forms[i];
                 // update the ui
-                updateUi();
+                AdminHack.updateUi();
                 break;
             }
         }
     });
 
     // ensure an option is selected
-    if (!$select.find('option:selected')) {
-        $select.find('option:first').attr('selected', 'selected');
+    if (!AdminHack.form_select.find('option:selected')) {
+        AdminHack.form_select.find('option:first').attr('selected', 'selected');
     }
     // trigger a change to update ui
-    $select.trigger('change');
+    AdminHack.form_select.trigger('change');
 }
 
 AdminHack.show_save_form = function(pending_record_changes) {
@@ -481,11 +478,13 @@ AdminHack.show_save_form = function(pending_record_changes) {
 }
 
 $(document).ready(function() {
+    AdminHack.form_select = $('select#id_admin_hack_form').length ? $('select#id_admin_hack_form') : false;
+
     // are there enought fieldsets to make tabs ?
     if ($('fieldset').length > 1) {
         // create the tab list after the first fieldset
         $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
-        $tabs = $('#fieldset_tabs');
+        AdminHack.tabs = $('#fieldset_tabs');
 
         // generate the tab list
         $('fieldset, .inline-group').each(function() {
@@ -508,10 +507,10 @@ $(document).ready(function() {
             if (!name)
                 $(this).addClass('always_active');
             else
-                $tabs.append('<li class="'+cls+'"><a href="javascript:;">'+name+'</a></li>');
+                AdminHack.tabs.append('<li class="'+cls+'"><a href="javascript:;">'+name+'</a></li>');
         });
 
-        $tabs.find('li').click(function() {
+        AdminHack.tabs.find('li').click(function() {
             // what is the fieldset name
             var name = $(this).find('a').html();
             
@@ -538,10 +537,10 @@ $(document).ready(function() {
                 AdminHack.enable_sortable();
             }
         });
-        if ($tabs.find('li.error').length)
-            $tabs.find('li.error:first').click();
+        if (AdminHack.tabs.find('li.error').length)
+            AdminHack.tabs.find('li.error:first').click();
         else
-            $tabs.find('li:first').click();
+            AdminHack.tabs.find('li:first').click();
     }
 
     /* This should work but for some reason it doesn't
@@ -559,7 +558,7 @@ $(document).ready(function() {
     });
     */
 
-    if ($select) {
+    if (AdminHack.form_select) {
         $(document).keyup(function(e) {
             if (e.keyCode == 13) {
                 $('#admin_hack_create_field_continue:visible').click();
@@ -591,7 +590,7 @@ $(document).ready(function() {
             $tr.find('td.name .slug').html(slug);
             AdminHack.updateCustomValues();
             // parse current form fieldset
-            AdminHack.currentForm.field_set = getFieldSet();
+            AdminHack.currentForm.field_set = AdminHack.getFieldSet();
             AdminHack.save();
         });
         $('#admin_hack_create_field_cancel').click(function() {
@@ -608,12 +607,12 @@ $(document).ready(function() {
         $('#admin_hack_reset').click(function() {
             var name = AdminHack.currentForm.name;
             AdminHack.deleteForm();
-            createForm(name);
+            AdminHack.createForm(name);
         });
 
-        // bind create button to createForm
+        // bind create button to AdminHack.createForm
         $('#admin_hack_create').click(function() {
-            createForm()
+            AdminHack.createForm()
         });
         
         // bind delete button to AdminHack.deleteForm
@@ -636,7 +635,7 @@ $(document).ready(function() {
                 $('.admin_hack_mode_hide').remove();
 
                 // parse current form fieldset
-                AdminHack.currentForm.field_set = getFieldSet();
+                AdminHack.currentForm.field_set = AdminHack.getFieldSet();
 
                 $(this).html(AdminHack.messages.saving).data('saving', 1);
                 
@@ -694,7 +693,7 @@ $(document).ready(function() {
                 });
 
                 // parse current form fieldset
-                AdminHack.currentForm.field_set = getFieldSet();
+                AdminHack.currentForm.field_set = AdminHack.getFieldSet();
 
                 $(this).html(AdminHack.messages.saving).data('saving', 1);
 
@@ -745,7 +744,7 @@ $(document).ready(function() {
                 $('fieldset').sortable('destroy');
 
                 // parse current form fieldset
-                AdminHack.currentForm.field_set = getFieldSet();
+                AdminHack.currentForm.field_set = AdminHack.getFieldSet();
                 
                 $(this).html(AdminHack.messages.saving).data('saving', 1);
                 
