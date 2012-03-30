@@ -94,6 +94,15 @@ class Form(models.Model):
     def __unicode__(self):
         return self.name
 
+    @classmethod
+    def is_enabled_on(self, model):
+        for f in model._meta.fields:
+            try:
+                if f.rel.to == Form:
+                    return True
+            except:
+                continue
+
     def model_admin(self, site=admin.site):
         model = self.contenttype.model_class()
         return site._registry[model]

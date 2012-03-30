@@ -26,6 +26,7 @@ def admin_hack_change_form_tools(context):
             'forms_pks': mark_safe(simplejson.dumps(forms_pks)),
             'kind_select': mark_safe(kind_select),
             'forms_dicts': mark_safe(simplejson.dumps(forms_dict)),
+            'display_change_form_tools': Form.is_enabled_on(ctype.model_class()),
         })
 
     return context

@@ -1,7 +1,7 @@
 {% load i18n %}
 {% load url from future %}
 
-{% if '_popup' not in request.GET.keys %}
+{% if display_change_form_tools and '_popup' not in request.GET.keys %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin_hack/style.css" />
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/jquery.json.min.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/lib.js"></script>
@@ -86,7 +86,7 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
 	<div class="admin_hack_toggle">
 		<ul>
-			<li class="hide_on_full">
+			<li class="hide_on_full ">
 				<span class="toggle_remove_btn admin_hack_mode" title="{% trans 'Remove fields from the selected form model' %}" id="admin_hack_mode_hide">
         			{% trans 'Remove fields' %}
     			</span>
@@ -96,29 +96,29 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
         			{% trans 'Un-remove fields' %}
     			</span>
 			</li>
-			<li class="hide_on_full">
+			<li class="hide_on_full toggle_move_btn">
 				<span class="toggle_move_btn admin_hack_mode" title="{% trans 'Reorder fields in the selected form model' %}" id="admin_hack_mode_move">
         			{% trans 'Move fields' %}
     			</span>
 			</li>
-            <li class="hide_on_full">
+            <li class="hide_on_full toggle_add_btn">
                 <span class="toggle_create_btn admin_hack_mode" title="{% trans 'Create a new field in the current tab' %}" id="admin_hack_create_field">{% trans 'Create field' %}</span>
             </li>
 			<li>
-				<span title="{% trans 'Create a new form model' %}" id="admin_hack_create">
+				<span title="{% trans 'Create a new form model' %}" id="admin_hack_create" class="toggle_new_btn">
         			{% trans 'New form' %}
     			</span>
 			</li>
 			<li class="hide_on_full">
-				<span title="{% trans 'Delete the currently selected form model' %}" id="admin_hack_delete">
+				<span title="{% trans 'Delete the currently selected form model' %}" id="admin_hack_delete" class="toggle_delete_btn">
         			{% trans 'Delete form' %}
     			</span>
 			</li>
 		</ul>
-		<ul class="help_links_toggle">
-			<li><a href="#">Settings</a></li>
-			<li><a href="#">Help</a></li>
-		</ul>
+		<!--<ul class="help_links_toggle">
+			<li><a href="#" class="toggle_settings_btn">Settings</a></li>
+			<li><a href="#" class="toggle_help_btn">Help</a></li>
+		</ul>-->
 	</div>  
 </div>
 {% endif %}

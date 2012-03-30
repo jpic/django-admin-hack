@@ -5,7 +5,7 @@ AdminHack.get_field_name = function(e) {
     
     var custom_name = false;
     e.find('input').each(function() {
-        if ($(this).attr('name').match(AdminHack.customvalue_name)) {
+        if ($(this).attr('name').match(AdminHack.regexps.customvalue_name)) {
             custom_name = $(this);
         }
     });
@@ -27,6 +27,8 @@ AdminHack.get_field_name = function(e) {
 }
 
 AdminHack.get_field_container = function(name) {
+    if (!name) return false;
+
     var test = $('.form-row.' + name);
     if (test.length) return test;
     var test = $('.form-row.' + slugify(name));
@@ -175,6 +177,10 @@ AdminHack.getFieldSet = function() {
 
     var names = [];
     $('fieldset .form-row').each(function() {
+        if ($(this).parents('.stacked').length) {
+            return
+        }
+
         if ($(this).hasClass('admin_hack_hidden')) {
             return
         }
@@ -203,7 +209,7 @@ AdminHack.getFieldSet = function() {
 
             var input = false;
             row.find('input').each(function() {
-                if ($(this).attr('name').match(AdminHack.customvalue_name)) {
+                if ($(this).attr('name').match(AdminHack.regexps.customvalue_name)) {
                     input = $(this);
                 }
             });
@@ -332,12 +338,13 @@ AdminHack.updateUi = function() {
 
 AdminHack.updateCustomValues = function() {
     var $custom_values_tab = $('fieldset.custom-values_tab');
-    $('.custom-values_tab tr').each(function() {
-        if (!$.trim($(this).find('td.name input').val())) {
+    $('.custom-values_tab tr:not(.empty-form)').each(function() {
+        var label = $.trim($(this).find('td.name input').val());
+
+        if (!label) {
             return;
         }
         
-        var label = $(this).find('td.name input').val();
         var slug = slugify($.trim($(this).find('td.name input').val()));
         var kind = $(this).find('td.kind select').val();
         var $value = $(this).find('td.value span.'+kind);
@@ -582,6 +589,9 @@ $(document).ready(function() {
             var slug = slugify(label);
             var kind = $('select[name=admin_hack_create_field_kind]').val();
             
+            if (!$('fieldset.custom-values_tab .add-row a').length) {
+                alert('DEBUG: no custom values tab, cannot add field');
+            }
             $('fieldset.custom-values_tab .add-row a').click();
             var $tr = $('fieldset.custom-values_tab tr.dynamic-customvalue_set:last');
             $tr.find('td.name input').val(label);
@@ -774,5 +784,7 @@ $(document).ready(function() {
         });
 
         AdminHack.change_form_main();
+
+        $(document).trigger('AdminHack.ready');
     }
 });
