@@ -1,71 +1,3 @@
-AdminHack.get_field_name = function(e) {
-    if (!e.is('.form-row')) {
-        e = e.parents('.form-row');
-    }
-    
-    var custom_name = false;
-    e.find('input').each(function() {
-        if ($(this).attr('name').match(AdminHack.regexps.customvalue_name)) {
-            custom_name = $(this);
-        }
-    });
-
-    if (custom_name) {
-        var name = custom_name.val();
-    } else {
-        var id = e.find('label').attr('for');
-        var name = id.replace(AdminHack.regexps.strip_id, '');
-
-        if (name.match(AdminHack.regexps.is_autocomplete)) {
-            if ($('#id_'+ name.replace(AdminHack.regexps.is_autocomplete, '_on_deck')).length) {
-                name = name.replace(AdminHack.regexps.is_autocomplete, '');
-            }
-        }
-    }
-
-    return name
-}
-
-AdminHack.get_field_container = function(name) {
-    if (!name) return false;
-
-    var test = $('.form-row.' + name);
-    if (test.length) return test;
-    var test = $('.form-row.' + slugify(name));
-    if (test.length) return test;
-}
-
-AdminHack.get_fieldset_h2 = function(fieldset) {
-    var children = fieldset.children();
-
-    if (children.length) {
-        var child = children[0];
-        if ($(child).is('h2')) {
-            return $(child);
-        }
-    }
-
-    if (fieldset.parent().is('.inline-group'))
-        return fieldset.parent().children('h2');
-}
-
-AdminHack.get_fieldset_name = function(fieldset) {
-    var fieldset_name = '';
-    var fieldset_h2 = AdminHack.get_fieldset_h2(fieldset);
-    if (fieldset_h2 != undefined) 
-        return $.trim(fieldset_h2.html().match(AdminHack.regexps.fieldset)[0]);
-}
-
-AdminHack.get_field_fieldset = function(e) {
-    if (!e.is('.form-row')) {
-        e = e.parents('.form-row');
-    }
-
-    var fieldset = e.parents('fieldset');
-     
-    return AdminHack.get_fieldset_name(fieldset);
-}
-
 AdminHack.enable_sortable = function() {
     $('fieldset:not(.inline-related fieldset):visible').sortable({
         connectWith: 'fieldset',
@@ -197,7 +129,7 @@ AdminHack.getFieldSet = function() {
             fieldset: fieldset,
         }
 
-        var row = $('.form-row.'+slugify(name));
+        var row = $('.form-row.'+AdminHack.slugify(name));
         if (row.find('.customvalue_extra').length) {
             var select = false;
             row.find('select').each(function() {
@@ -345,7 +277,7 @@ AdminHack.updateCustomValues = function() {
             return;
         }
         
-        var slug = slugify($.trim($(this).find('td.name input').val()));
+        var slug = AdminHack.slugify($.trim($(this).find('td.name input').val()));
         var kind = $(this).find('td.kind select').val();
         var $value = $(this).find('td.value span.'+kind);
         var value_id = 'id_' + slug;
@@ -463,7 +395,7 @@ AdminHack.show_save_form = function(pending_record_changes) {
     $('#content-main .submit-row input[type=submit]').hide();
 
     // add form save button
-    var button = admin_hack_html_tag_factory('span', {
+    var button = AdminHack.html_tag_factory('span', {
         'class': 'btn success admin_hack_save',
         'title': AdminHack.messages.save,
     }, AdminHack.messages.save);
@@ -486,69 +418,6 @@ AdminHack.show_save_form = function(pending_record_changes) {
 
 $(document).ready(function() {
     AdminHack.form_select = $('select#id_admin_hack_form').length ? $('select#id_admin_hack_form') : false;
-
-    // are there enought fieldsets to make tabs ?
-    if ($('fieldset').length > 1) {
-        // create the tab list after the first fieldset
-        $('fieldset:first').after('<ul class="tabs" id="fieldset_tabs"></ul>');
-        AdminHack.tabs = $('#fieldset_tabs');
-
-        // generate the tab list
-        $('fieldset, .inline-group').each(function() {
-            // pass on stacked inlines
-            if ($(this).is('.inline-related:not(.tabular) fieldset'))
-                return
-            if ($(this).is('.inline-group')) {
-                if ($(this).find('.tabular').length) return
-                $(this).addClass('stacked');
-            }
-
-            var name = AdminHack.get_fieldset_name($(this));
-            var slug = slugify(name || '');
-            var error = $(this).find('.errorlist').length > 0;
-            $(this).addClass(slug + '_tab');
-
-            var cls = slug + '_tab';
-            if (error) cls = cls + ' error';
-
-            if (!name)
-                $(this).addClass('always_active');
-            else
-                AdminHack.tabs.append('<li class="'+cls+'"><a href="javascript:;">'+name+'</a></li>');
-        });
-
-        AdminHack.tabs.find('li').click(function() {
-            // what is the fieldset name
-            var name = $(this).find('a').html();
-            
-            // what is the fieldset element
-            var fieldset;
-            $('fieldset, .stacked').each(function() {
-                if (name != AdminHack.get_fieldset_name($(this))) return
-                fieldset = $(this);
-            });
-
-            // is the user trying to open a tab that is already open ?
-            if (fieldset.hasClass('active')) return
-
-            // deactivate the active fieldset
-            $('.active').removeClass('active');
-            // activate the related fieldset
-            fieldset.addClass('active');
-            fieldset.parents('.inline-group').addClass('active');
-            $(this).addClass('active');
-
-            if ($('#admin_hack_mode_move').hasClass('enabled')) {
-                // re enable sortable
-                $('fieldset').sortable('destroy');
-                AdminHack.enable_sortable();
-            }
-        });
-        if (AdminHack.tabs.find('li.error').length)
-            AdminHack.tabs.find('li.error:first').click();
-        else
-            AdminHack.tabs.find('li:first').click();
-    }
 
     /* This should work but for some reason it doesn't
     $('li, .switch-on-hover, .switch-on-hover a').live('mouseover', function() {
@@ -586,7 +455,7 @@ $(document).ready(function() {
             }
             $('#admin_hack_modal, #admin_hack_overlay').hide();
             var label = $('input[name=admin_hack_create_field_name]').val();
-            var slug = slugify(label);
+            var slug = AdminHack.slugify(label);
             var kind = $('select[name=admin_hack_create_field_kind]').val();
             
             if (!$('fieldset.custom-values_tab .add-row a').length) {
@@ -660,7 +529,7 @@ $(document).ready(function() {
                 });
             } else {
                 // create the hide button html
-                var button = admin_hack_html_tag_factory('span', {
+                var button = AdminHack.html_tag_factory('span', {
                     'class': 'btn danger admin_hack_mode_hide',
                     'title': AdminHack.messages.hide_field,
                 }, AdminHack.messages.remove);
@@ -718,7 +587,7 @@ $(document).ready(function() {
                 });
             } else {
                 // create the show button html
-                var button = admin_hack_html_tag_factory('span', {
+                var button = AdminHack.html_tag_factory('span', {
                     'class': 'btn success admin_hack_mode_show',
                     'title': AdminHack.messages.unremove_help,
                 }, AdminHack.messages.unremove);

@@ -3,6 +3,7 @@ from django.utils import simplejson
 from django.utils.safestring import mark_safe
 from django.contrib.contenttypes.models import ContentType
 from django.forms import Select
+from django.conf import settings
 
 from admin_hack.models import Form, FormForModel, KIND_CHOICES
 
@@ -27,6 +28,7 @@ def admin_hack_change_form_tools(context):
             'kind_select': mark_safe(kind_select),
             'forms_dicts': mark_safe(simplejson.dumps(forms_dict)),
             'display_change_form_tools': Form.is_enabled_on(ctype.model_class()),
+            'DEBUG': settings.DEBUG,
         })
 
     return context
