@@ -58,7 +58,7 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/lib.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/change_form_tabs.js"></script>
 
-{% if display_change_form_tools and '_popup' not in request.GET.keys %}
+    {% if display_change_form_tools %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin_hack/style.css" />
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/jquery.json.min.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/change_form.js"></script>
@@ -109,4 +109,4 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 		</ul>-->
 	</div>  
 </div>
-{% endif %}
+    {% endif %}
