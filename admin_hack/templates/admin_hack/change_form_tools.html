@@ -36,6 +36,7 @@ var AdminHack = {
 }
 </script>
 <style type="text/css">
+{% if adminform.fieldsets|length > 1 %}
 .admin_hack_hidden, .collapsed .form-row, 
 fieldset.collapsed.admin_hack_hidden h2, 
 fieldset.collapsed.admin_hack_hidden {
@@ -44,6 +45,8 @@ fieldset.collapsed.admin_hack_hidden {
 
 fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 .active, .always_active, .active.stacked fieldset { display: block !important; }
+{% endif %}
+
 .admin_hack_toggle { display: none; }
 
 {% if not DEBUG %}
