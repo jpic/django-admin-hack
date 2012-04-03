@@ -221,7 +221,7 @@ AdminHack.updateUi = function() {
     }
 
     /* let's hide un-necessary fields */
-    $('.form-row').each(function() {
+    $('.form-row:not(.stacked .form-row)').each(function() {
         var name = AdminHack.get_field_name($(this));
         if (name == 'admin_hack_form') return
 
