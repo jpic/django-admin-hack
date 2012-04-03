@@ -1,3 +1,7 @@
+if (AdminHack == undefined) {
+    var AdminHack = {}
+}
+
 AdminHack.get_field_name = function(e) {
     if (!e.is('.form-row')) {
         e = e.parents('.form-row');
