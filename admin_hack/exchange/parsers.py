@@ -1,6 +1,8 @@
+import datetime
 import re
 import csv
 
+from django.db import transaction
 from django.db import models
 from django import shortcuts
 from django import http
@@ -17,7 +19,13 @@ class CsvParser(object):
         self.actions = None
         self.field_delimiter = ';'
 
+    @transaction.commit_manually
     def load(self, upload, max_rows=None):
+        self.process = Process(upload=upload, 
+            template=upload.template, rows=[])
+        self.process.save()
+        transaction.commit()
+
         model_class = upload.template.contenttype.model_class()
         
         f = open(upload.upload.path, 'rb')
@@ -25,36 +33,62 @@ class CsvParser(object):
 
         row_count = 0
         for row in reader:
-            i = 0
-            if i == 0:
-                row[0] = row[0].decode('utf-8-sig')
-            model = None
-            for action in self.actions:
-                if action and action[0] == '$':
-                    try:
-                        model = model_class.objects.get(**{action[1:]: row[i]})
-                        model._saved = True
-                    except model_class.DoesNotExist:
-                        model = model_class(**{action[1:]: row[i]})
-                        model._saved = False
+            if not len(row):
+                continue
+
+            sid = transaction.savepoint()
+
+            try:
+                i = 0
+                if i == 0:
+                    row[0] = row[0].decode('utf-8-sig')
+                model = None
+                for action in self.actions:
+                    if action and action[0] == '$':
+                        try:
+                            model = model_class.objects.get(**{action[1:]: row[i]})
+                            model._saved = True
+                        except model_class.DoesNotExist:
+                            model = model_class(**{action[1:]: row[i]})
+                            model._saved = False
+                        break
+                    i += 1
+                
+                i = 0
+                for action in self.actions:
+                    value = row[i]
+                    if isinstance(value, str):
+                        value = unicode(value, 'utf-8').strip()
+                    self.execute(model, action, value)
+                    i += 1
+
+                model.save()
+                self.process.rows.append(row)
+                transaction.savepoint_commit(sid)
+                self.process.save()
+                transaction.commit()
+
+                row_count += 1
+
+                if row_count == max_rows:
                     break
-                i += 1
-            
-            i = 0
-            for action in self.actions:
-                value = row[i]
-                if isinstance(value, str):
-                    value = unicode(value, 'utf-8').strip()
-                self.execute(model, action, value)
-                i += 1
-
-            model.save()
-
-            row_count += 1
-            if row_count == max_rows:
+            except KeyboardInterrupt:
+                transaction.savepoint_rollback(sid)
+                self.process.interrupted = True
                 break
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+
+                self.process.error_set.create(
+                    exception=e, row=row, description=e.message,
+                    row_number=row_count-1)
+
+                transaction.commit()
 
         f.close()
+        self.process.end_datetime = datetime.datetime.now()
+        self.process.save()
+        transaction.commit()
 
     def execute(self, model, action, value):
         kind_choices = [x + '_value' for x, y in KIND_CHOICES]

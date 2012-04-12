@@ -1,0 +1,51 @@
+{% extends 'theme_base.html' %}
+
+{% load i18n %}
+
+{% block body %}
+    <table>
+        <thead>
+        </thead>
+            <tr>
+                <th>
+                    {% trans 'Started' %}
+                </th>
+                <th>
+                    {% trans 'Ended' %}
+                </th>
+                <th>
+                    {% trans 'Inserted' %}
+                </th>
+                <th>
+                    {% trans 'Failed' %}
+                </th>
+            </tr>
+        <tbody>
+        {% for process in object_list %}
+            <tr>
+                <td>
+                    {{ process.creation_datetime }}
+                </td>
+                <td>
+                    {% if process.end_datetime %}
+                        {% if process.interrupted %}
+                            {% trans 'Manually interrupted on' %}
+                        {% endif %}
+                        {{ process.end_datetime }}
+                    {% else %}
+                        {% trans 'In progress' %}
+                    {% endif %}
+                </td>
+                <td>
+                    {{ process.rows|length }}
+                </td>
+                <td>
+                    <a href="{{ process.get_absolute_url }}">
+                        {{ process.error_set.count }}
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

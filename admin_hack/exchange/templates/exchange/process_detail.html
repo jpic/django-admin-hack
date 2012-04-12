@@ -1,0 +1,52 @@
+{% extends 'theme_base.html' %}
+
+{% load i18n %}
+
+{% block body %}
+    {% trans 'Process started' %}: {{ object.creation_datetime }}
+
+    <br />
+
+    {% if process.end_datetime %}
+        {% trans 'Process ended' %}: {{ object.end_datetime }}
+    {% else %}
+        {% trans 'In progress' %}
+    {% endif %}
+
+    <br />
+
+    {% trans 'Inserted rows' %}: {{ object.rows|length }}
+
+    <br />
+
+    {% trans 'Failed rows' %}: {{ object.error_set.all|length }}
+    
+    <table>
+        <thead>
+            <tr>
+                <th>
+                    {% trans 'Error description' %}
+                </th>
+                {% for action in object.template.parser.actions %}
+                <th>
+                    {{ action }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for error in object.error_set.all %}
+            <tr>
+                <td>
+                    {{ error.description }}
+                </td>
+                {% for column in error.row %}
+                <td>
+                    {{ column }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
