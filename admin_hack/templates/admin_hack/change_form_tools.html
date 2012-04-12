@@ -59,7 +59,7 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/change_form_tabs.js"></script>
 
     {% if display_change_form_tools %}
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}admin_hack/style.css" />
+
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/jquery.json.min.js"></script>
 <script type="text/javascript" src="{{ STATIC_URL }}admin_hack/change_form.js"></script>
 
@@ -71,7 +71,7 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
 </div>
 
 <div id="admin_hack">
-	<a href="javascript:;" id="toggle_links" class="toggle_next">toggle setting</a>
+	<a href="javascript:;" id="toggle_links" class="toggle_next left" rel="twipsy" title="{% trans 'Create et manage your own form model' %}">toggle setting</a>
 	<div class="admin_hack_toggle">
 		<ul>
 			<li class="hide_on_full ">
