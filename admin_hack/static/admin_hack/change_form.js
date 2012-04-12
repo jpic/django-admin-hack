@@ -3,7 +3,7 @@ AdminHack.enable_sortable = function() {
         connectWith: 'fieldset',
         forcePlaceholderSize: true,
         placeholder: 'ui-state-highlight',
-        items: '.form-row',
+        items: '.form-row:not(.admin_hack_form)',
         stop: function(e, ui) {
             AdminHack.tabs.find('li').removeClass('switch-on-hover');
         },
