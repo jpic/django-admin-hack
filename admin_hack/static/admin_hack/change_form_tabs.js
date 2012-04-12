@@ -57,10 +57,41 @@ $(document).ready(function() {
                 AdminHack.enable_sortable();
             }
         });
-        if (AdminHack.tabs.find('li.error').length)
+
+        if ($.cookie != undefined) {
+            // if path is /admin/art/artwork/add/ or /admin/art/artwork/1234/
+            // then path should be just /admin/art/artwork
+            var path = document.location.pathname.split('/').slice(0, -2).join('/');
+
+            // jquery cookie plugin enabled
+            $('input[name=_continue]').click(function() {
+                $.cookie(
+                    'current_tab', 
+                    AdminHack.tabs.find('li.active').attr('class').match(/[a-z-]+_tab/)[0],
+                    {
+                        path: path, 
+                        expires: 1
+                    }
+                );
+            });
+            $('input[name=_save], input[name=_addanother], a').click(function() {
+                $.cookie('current_tab', null, { expires: -1, path: path });
+            });
+
+            var cookie_tab = $.cookie('current_tab');
+        }
+
+        $(document).trigger('AdminHack.tabs.before_select');
+
+        if (AdminHack.tabs.find('li.error').length) {
             AdminHack.tabs.find('li.error:first').click();
-        else
-            AdminHack.tabs.find('li:first').click();
+        } else {
+            if (cookie_tab != undefined && cookie_tab && cookie_tab.length) {
+                AdminHack.tabs.find('li.' + cookie_tab).click();
+            } else {
+                AdminHack.tabs.find('li:first').click();
+            }
+        }
     }
 });
 
