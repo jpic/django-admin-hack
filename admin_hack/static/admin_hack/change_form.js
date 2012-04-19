@@ -141,7 +141,7 @@ AdminHack.getFieldSet = function() {
         }
 
         var row = $('.form-row.'+AdminHack.slugify(name));
-        if (row.find('.customvalue_extra').length) {
+        if (AdminHack.currentForm.name != 'full' && row.find('.customvalue_extra').length) {
             var select = false;
             row.find('select').each(function() {
                 if ($(this).attr('name').match(AdminHack.regexps.customvalue_kind)) {
