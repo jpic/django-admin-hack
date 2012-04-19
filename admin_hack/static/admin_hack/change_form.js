@@ -68,6 +68,17 @@ AdminHack.deleteForm = function() {
     }
 }
 
+AdminHack.resetForm = function() {
+    $.post(AdminHack.urls.admin_hack_form_reset, {
+            name: AdminHack.currentForm.name, 
+            ctype: AdminHack.currentForm.contenttype.pk, 
+        }, 
+        function() {
+            window.location.reload()
+        }
+    );
+}
+
 AdminHack.createForm = function(name) {
     var field_set;
 
@@ -484,9 +495,10 @@ $(document).ready(function() {
 
         // bin the reset button to delete and re-create the current form
         $('#admin_hack_reset').click(function() {
-            var name = AdminHack.currentForm.name;
-            AdminHack.deleteForm();
-            AdminHack.createForm(name);
+            var confirmed = confirm(AdminHack.messages.confirm_form_reset + ' ' + AdminHack.currentForm.name + '" ? ' + AdminHack.messages.no_going_back);
+            if (confirmed) {
+                AdminHack.resetForm()
+            }
         });
 
         // bind create button to AdminHack.createForm

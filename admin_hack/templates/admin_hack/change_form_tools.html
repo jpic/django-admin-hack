@@ -14,13 +14,15 @@ var AdminHack = {
         hide_field: "{% trans "Hide this field" %}",
         move_fields: "{% trans "Move fields" %}",
         full_protected: "{% trans "You may not remove the 'full' form. It serves as reference." %}",
-        confirm_form_delete: "{% trans "Are you sure you want to this form model" %}",
+        confirm_form_delete: "{% trans "Are you sure you want to delete form model" %}",
+        confirm_form_reset: "{% trans "Are you sure you want to reset form model" %}",
         no_going_back: "{% trans "There is no going back once you push the confirmation button" %}",
         new_form_name: "{% trans "How should we name the new form ?" %}",
         new_field_name: "{% trans "Please set the name of the field you want to add" %}",
     },
     urls: {
         admin_hack_forms_update: "{% url 'admin_hack_forms_update' %}",
+        admin_hack_form_reset: "{% url 'admin_hack_form_reset' %}",
     },
     forms: {{ forms_dicts }},
     regexps: {
@@ -92,6 +94,11 @@ fieldset , fieldset h2, .stacked, .inline-group { display: none; }
             <li class="hide_on_full toggle_add_btn">
                 <span class="toggle_create_btn admin_hack_mode" title="{% trans 'Create a new field in the current tab' %}" id="admin_hack_create_field">{% trans 'Create field' %}</span>
             </li>
+			<li>
+				<span title="{% trans 'Reset this form configuration' %}" id="admin_hack_reset" class="reset_btn">
+        			{% trans 'Reset form' %}
+    			</span>
+			</li>
 			<li>
 				<span title="{% trans 'Create a new form model' %}" id="admin_hack_create" class="toggle_new_btn">
         			{% trans 'New form' %}

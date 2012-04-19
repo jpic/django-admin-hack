@@ -14,6 +14,13 @@ from forms import *
 FORM_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/([0-9]+|(add))/'
 LIST_URL_REGEXP = r'/(?P<app>[a-z]+)/(?P<model>[a-z]+)/$'
 
+class AdminHackFormResetView(generic.View):
+    def post(self, request, *args, **kwargs):
+        name = request.POST['name']
+        ctype = ContentType.objects.get(pk=request.POST['ctype'])
+        Form.objects.get(name=name, contenttype=ctype).delete()
+        return http.HttpResponse()
+
 class AdminHackFormsUpdateView(generic.View):
     def post(self, request, *args, **kwargs):
         data = simplejson.loads(request.POST['forms'])
