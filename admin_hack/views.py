@@ -43,7 +43,7 @@ class AdminHackFormsUpdateView(generic.View):
         contenttype = ContentType.objects.get(pk=form_dict['contenttype']['pk'])
 
         names = [f['name'] for f in data]
-        Form.objects.filter(contenttype=contenttype).exclude(name__in=names).delete()
+        Field.objects.filter(form=Form.objects.filter(contenttype=contenttype).exclude(name__in=names)).delete()
 
         forms = Form.objects.filter(contenttype=contenttype).select_related('field')
         response = http.HttpResponse(simplejson.dumps([f.to_dict() for f in forms]), 
