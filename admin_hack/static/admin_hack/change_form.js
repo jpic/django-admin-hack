@@ -652,6 +652,15 @@ $(document).ready(function() {
             }
         });
 
+        $(document).click(function(e) { 
+            if ($(e.srcElement).is('#toggle_links')) {
+                return;
+            }
+            if ($('.admin_hack_toggle:visible').length && $(e.srcElement).is('.admin_hack_toggle') == false && $('.admin_hack_toggle').find(e.srcElement).length == 0) {
+                $('.admin_hack_toggle:visible').hide();
+            }
+        });
+
         AdminHack.change_form_main();
 
         $(document).trigger('AdminHack.ready');
