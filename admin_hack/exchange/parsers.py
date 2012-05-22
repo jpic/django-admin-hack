@@ -80,7 +80,7 @@ class CsvParser(object):
                 transaction.savepoint_rollback(sid)
 
                 self.process.error_set.create(
-                    exception=e, row=row, description=e.message,
+                    exception=e, row=row, description=unicode(e),
                     row_number=row_count-1)
 
                 transaction.commit()
