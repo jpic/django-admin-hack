@@ -35,11 +35,7 @@ $(document).ready(function() {
             var name = $(this).find('a').html();
             
             // what is the fieldset element
-            var fieldset;
-            $('fieldset, .stacked').each(function() {
-                if (name != AdminHack.get_fieldset_name($(this))) return
-                fieldset = $(this);
-            });
+            var fieldset = get_fieldset_for_tab($(this));
 
             // is the user trying to open a tab that is already open ?
             if (fieldset.hasClass('active')) return
@@ -55,6 +51,10 @@ $(document).ready(function() {
                 // re enable sortable
                 $('fieldset').sortable('destroy');
                 AdminHack.enable_sortable();
+            }
+
+            if ($('#fieldset_tabs').hasClass('accordeon')) {
+                updateAccordeon();
             }
         });
 
@@ -93,5 +93,53 @@ $(document).ready(function() {
             }
         }
     }
+
+    if ($(window).width() <= 760) updateAccordeon();
+    $(window).resize(function() { 
+        $(window).width() <= 768 ? updateAccordeon() : updateTabs();
+    });
 });
 
+function get_fieldset_for_tab(tab) {
+    // what is the fieldset name
+    var name = tab.find('a').html();
+
+    // what is the fieldset element
+    var fieldset;
+    $('fieldset, .stacked').each(function() {
+        if (name != AdminHack.get_fieldset_name($(this))) return
+        fieldset = $(this);
+    });
+
+    return fieldset;
+}
+
+function updateAccordeon() {
+    $('#fieldset_tabs').addClass('accordeon');
+
+    var bottom_tabs = $('#bottom_tabs');
+    if (!bottom_tabs.length) {
+        var bottom_tabs = $('<ul class="accordeon" id="bottom_tabs"></ul>').insertBefore($('.submit-row'));
+    }
+
+    var upper_tabs = $('#fieldset_tabs');
+    var foundActive = false;
+    $('#fieldset_tabs li, #bottom_tabs li').each(function() {
+        if ($(this).hasClass('active')) {
+            upper_tabs.append($(this));
+            foundActive = true;
+        } else if (foundActive) {
+            bottom_tabs.append($(this));
+        } else {
+            upper_tabs.append($(this));
+        }
+    });
+}
+
+function updateTabs() {
+    $('#fieldset_tabs').removeClass('accordeon');
+
+    $('#bottom_tabs li').each(function() {
+        $('#fieldset_tabs').append($(this));
+    });
+}
