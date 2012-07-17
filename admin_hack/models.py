@@ -149,6 +149,11 @@ class Field(models.Model):
         ordering = ('order',)
 
     def to_dict(self):
+        if not self.kind:
+            try:
+                self.kind = CustomValue.objects.filter(name=self.name)[0].kind
+            except:
+                pass
         return {
             'pk': self.pk,
             'name': self.name,
