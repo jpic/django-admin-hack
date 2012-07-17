@@ -24,6 +24,9 @@ $(document).ready(function() {
             var cls = slug + '_tab';
             if (error) cls = cls + ' error';
 
+            if (name == 'Custom values')
+                return
+
             if (!name)
                 $(this).addClass('always_active');
             else
